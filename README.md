@@ -61,14 +61,12 @@ This repo includes a workflow that builds and publishes the site automatically.
 
    (For this repo: `https://nsherrer52-gif.github.io/website/`)
 
-### If you rename the repo or use a custom domain
+### Renaming the repo or using a custom domain
 
-The site is configured to live in a sub-folder called `/website/`. If your repo
-has a different name, edit **one line** in [`vite.config.ts`](./vite.config.ts):
-
-```ts
-base: '/website/',   // change to '/your-repo-name/'  — or '/' for a custom domain
-```
+Nothing to change! The build uses a **relative base path** (`base: './'` in
+[`vite.config.ts`](./vite.config.ts)), so the site works at any URL — whether
+that's `/Website/`, `/website/`, a custom domain at `/`, or another host like
+Netlify/Vercel.
 
 ---
 
