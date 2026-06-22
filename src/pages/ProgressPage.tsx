@@ -1,11 +1,13 @@
 import { useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useStore, useActiveProfile, useProfileSessions } from '../store/useStore'
 import { loggedExerciseNames, summarizeSets } from '../lib/history'
 import { bestEstimated1RM, topSetWeight, totalVolume, sessionVolume, round1 } from '../lib/stats'
 import { formatShort, formatDate } from '../lib/date'
+import { computePRSet, prKey } from '../lib/pr'
 import { PageHeader, EmptyState, Stat } from '../components/ui'
 import { LineChartCard, type ChartPoint } from '../components/LineChartCard'
+import { MusclesTab } from './MusclesTab'
 
 type Metric = '1rm' | 'top' | 'volume'
 const METRICS: { key: Metric; label: string }[] = [
@@ -14,28 +16,39 @@ const METRICS: { key: Metric; label: string }[] = [
   { key: 'volume', label: 'Volume' },
 ]
 
+type Tab = 'charts' | 'muscles' | 'history'
+const TABS: { key: Tab; label: string }[] = [
+  { key: 'charts', label: 'Charts' },
+  { key: 'muscles', label: 'Muscles' },
+  { key: 'history', label: 'History' },
+]
+
 export function ProgressPage() {
-  const [tab, setTab] = useState<'charts' | 'history'>('charts')
+  const [params] = useSearchParams()
+  const initialTab = (TABS.find((t) => t.key === params.get('tab'))?.key ?? 'charts') as Tab
+  const [tab, setTab] = useState<Tab>(initialTab)
 
   return (
     <div className="space-y-5">
       <PageHeader title="Progress" subtitle="Review how you're trending over time." />
 
-      <div className="grid grid-cols-2 gap-1 rounded-xl bg-slate-800 p-1">
-        {(['charts', 'history'] as const).map((t) => (
+      <div className="grid grid-cols-3 gap-1 rounded-xl bg-slate-800 p-1">
+        {TABS.map((t) => (
           <button
-            key={t}
-            onClick={() => setTab(t)}
-            className={`rounded-lg py-2 text-sm font-semibold capitalize transition ${
-              tab === t ? 'bg-sky-500 text-slate-950' : 'text-slate-300'
+            key={t.key}
+            onClick={() => setTab(t.key)}
+            className={`rounded-lg py-2 text-sm font-semibold transition ${
+              tab === t.key ? 'bg-sky-500 text-slate-950' : 'text-slate-300'
             }`}
           >
-            {t}
+            {t.label}
           </button>
         ))}
       </div>
 
-      {tab === 'charts' ? <ChartsTab /> : <HistoryTab />}
+      {tab === 'charts' && <ChartsTab />}
+      {tab === 'muscles' && <MusclesTab />}
+      {tab === 'history' && <HistoryTab />}
     </div>
   )
 }
@@ -152,6 +165,11 @@ function HistoryTab() {
   const deleteSession = useStore((s) => s.deleteSession)
   const [openId, setOpenId] = useState<string | null>(null)
 
+  const prs = useMemo(
+    () => (profile ? computePRSet(sessions, profile.id) : new Set<string>()),
+    [sessions, profile],
+  )
+
   if (sessions.length === 0) {
     return (
       <EmptyState icon="🗓️" title="No workouts logged yet">
@@ -165,6 +183,7 @@ function HistoryTab() {
       {sessions.map((s) => {
         const open = openId === s.id
         const vol = round1(sessionVolume(s))
+        const sessionHasPR = s.exercises.some((_, i) => prs.has(prKey(s.id, i)))
         return (
           <div key={s.id} className="card overflow-hidden">
             <button
@@ -172,7 +191,10 @@ function HistoryTab() {
               onClick={() => setOpenId(open ? null : s.id)}
             >
               <div>
-                <div className="font-semibold">{s.dayName}</div>
+                <div className="flex items-center gap-1.5 font-semibold">
+                  {s.dayName}
+                  {sessionHasPR && <span title="New personal record">🏆</span>}
+                </div>
                 <div className="text-xs text-slate-400">
                   {formatDate(s.date)}
                   {!s.completedAt && <span className="ml-2 text-amber-400">· in progress</span>}
@@ -188,7 +210,10 @@ function HistoryTab() {
               <div className="space-y-2 border-t border-slate-700/60 p-4">
                 {s.exercises.map((ex, i) => (
                   <div key={ex.exerciseId + i} className="text-sm">
-                    <div className="font-medium">{ex.name}</div>
+                    <div className="flex items-center gap-1.5 font-medium">
+                      {ex.name}
+                      {prs.has(prKey(s.id, i)) && <span title="New personal record">🏆</span>}
+                    </div>
                     <div className="text-slate-400">{summarizeSets(ex)}</div>
                   </div>
                 ))}

@@ -3,7 +3,10 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { useStore, useActiveProfile } from '../store/useStore'
 import { lastPerformance, summarizeSets } from '../lib/history'
 import { formatLongDate } from '../lib/date'
+import { computePRSet, prKey } from '../lib/pr'
+import { muscleName } from '../lib/muscles'
 import { EmptyState } from '../components/ui'
+import { Stepper } from '../components/Stepper'
 import type { LoggedExercise } from '../types'
 
 export function WorkoutPage() {
@@ -13,6 +16,12 @@ export function WorkoutPage() {
 
   const session = useStore((s) => s.sessions.find((x) => x.id === id))
   const allSessions = useStore((s) => s.sessions)
+
+  // Personal records recompute live as you log, so 🏆 appears the moment you beat one.
+  const prs = useMemo(
+    () => (profile ? computePRSet(allSessions, profile.id) : new Set<string>()),
+    [allSessions, profile],
+  )
 
   const updateSet = useStore((s) => s.updateSet)
   const addSet = useStore((s) => s.addSet)
@@ -39,12 +48,6 @@ export function WorkoutPage() {
     0,
   )
   const totalSets = session.exercises.reduce((n, ex) => n + ex.sets.length, 0)
-
-  function num(v: string): number | null {
-    if (v.trim() === '') return null
-    const n = Number(v)
-    return Number.isFinite(n) ? n : null
-  }
 
   function handleFinish() {
     finishSession(session!.id)
@@ -106,11 +109,11 @@ export function WorkoutPage() {
           ex={ex}
           last={lastPerformance(allSessions, session.profileId, ex.name, session.id)}
           unit={profile?.unit ?? 'lb'}
+          isPR={prs.has(prKey(session.id, exIndex))}
           onSetChange={(setId, patch) => updateSet(session.id, exIndex, setId, patch)}
           onAddSet={() => addSet(session.id, exIndex)}
           onRemoveSet={(setId) => removeSet(session.id, exIndex, setId)}
           onNotes={(notes) => setExerciseNotes(session.id, exIndex, notes)}
-          parseNum={num}
         />
       ))}
 
@@ -167,29 +170,40 @@ function ExerciseCard({
   ex,
   last,
   unit,
+  isPR,
   onSetChange,
   onAddSet,
   onRemoveSet,
   onNotes,
-  parseNum,
 }: {
   ex: LoggedExercise
   last: { date: string; exercise: LoggedExercise } | null
   unit: string
+  isPR: boolean
   onSetChange: (setId: string, patch: { reps?: number | null; weight?: number | null; done?: boolean }) => void
   onAddSet: () => void
   onRemoveSet: (setId: string) => void
   onNotes: (notes: string) => void
-  parseNum: (v: string) => number | null
 }) {
   const [showNotes, setShowNotes] = useState(!!ex.notes)
+  const weightStep = unit === 'kg' ? 2.5 : 5
+
+  const muscleHint = Object.entries(ex.muscles ?? {})
+    .filter(([, v]) => v > 0)
+    .map(([id, v]) => `${muscleName(id)} ${v === 1 ? '1' : '½'}`)
+    .join(' · ')
 
   return (
     <div className="card p-4">
       <div className="flex items-baseline justify-between gap-2">
-        <h3 className="text-lg font-bold">{ex.name}</h3>
+        <h3 className="flex items-center gap-1.5 text-lg font-bold">
+          {ex.name}
+          {isPR && <span title="New personal record">🏆</span>}
+        </h3>
         {ex.targetReps && <span className="text-xs text-slate-400">target {ex.targetReps} reps</span>}
       </div>
+
+      {muscleHint && <div className="mt-0.5 text-xs text-slate-500">{muscleHint}</div>}
 
       {last && (
         <div className="mt-1 text-xs text-slate-400">
@@ -198,10 +212,10 @@ function ExerciseCard({
       )}
 
       {/* Column headers */}
-      <div className="mt-3 grid grid-cols-[2rem_1fr_1fr_2.5rem_2rem] items-center gap-2 text-[11px] uppercase tracking-wide text-slate-500">
+      <div className="mt-3 grid grid-cols-[1.5rem_1fr_1fr_2.25rem_1.25rem] items-center gap-1.5 text-[11px] uppercase tracking-wide text-slate-500">
         <span>Set</span>
-        <span>{unit}</span>
-        <span>Reps</span>
+        <span className="pl-2">{unit}</span>
+        <span className="pl-2">Reps</span>
         <span className="text-center">Done</span>
         <span />
       </div>
@@ -210,24 +224,20 @@ function ExerciseCard({
         {ex.sets.map((s, i) => (
           <div
             key={s.id}
-            className="grid grid-cols-[2rem_1fr_1fr_2.5rem_2rem] items-center gap-2"
+            className="grid grid-cols-[1.5rem_1fr_1fr_2.25rem_1.25rem] items-center gap-1.5"
           >
             <span className="text-center text-sm font-semibold text-slate-400">{i + 1}</span>
-            <input
-              className="input px-2 py-2 text-center"
-              type="number"
-              inputMode="decimal"
-              placeholder="—"
-              value={s.weight ?? ''}
-              onChange={(e) => onSetChange(s.id, { weight: parseNum(e.target.value) })}
+            <Stepper
+              value={s.weight}
+              step={weightStep}
+              ariaLabel="weight"
+              onChange={(v) => onSetChange(s.id, { weight: v })}
             />
-            <input
-              className="input px-2 py-2 text-center"
-              type="number"
-              inputMode="numeric"
-              placeholder="—"
-              value={s.reps ?? ''}
-              onChange={(e) => onSetChange(s.id, { reps: parseNum(e.target.value) })}
+            <Stepper
+              value={s.reps}
+              step={1}
+              ariaLabel="reps"
+              onChange={(v) => onSetChange(s.id, { reps: v })}
             />
             <button
               aria-label={s.done ? 'Mark set not done' : 'Mark set done'}

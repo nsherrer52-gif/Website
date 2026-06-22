@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { useStore } from '../store/useStore'
 import { PageHeader, EmptyState } from '../components/ui'
-import type { WorkoutDay } from '../types'
+import { MuscleEditor } from '../components/MuscleEditor'
+import type { MuscleContribution, WorkoutDay } from '../types'
 
 export function ProgramPage() {
   const program = useStore((s) => s.program)
@@ -189,6 +190,8 @@ function DayEditor({ day, index, total }: { day: WorkoutDay; index: number; tota
                   />
                 </div>
               </div>
+
+              <ExerciseMuscles dayId={day.id} exId={ex.id} name={ex.name} muscles={ex.muscles} />
             </div>
           ))}
 
@@ -204,6 +207,51 @@ function DayEditor({ day, index, total }: { day: WorkoutDay; index: number; tota
               + Add
             </button>
           </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+
+/** Collapsible muscle-contribution editor for a single program exercise. */
+function ExerciseMuscles({
+  dayId,
+  exId,
+  name,
+  muscles,
+}: {
+  dayId: string
+  exId: string
+  name: string
+  muscles?: MuscleContribution
+}) {
+  const setExerciseMuscles = useStore((s) => s.setExerciseMuscles)
+  const setLibraryMuscles = useStore((s) => s.setLibraryMuscles)
+  const [open, setOpen] = useState(false)
+
+  const count = Object.values(muscles ?? {}).filter((v) => v > 0).length
+
+  return (
+    <div className="mt-2">
+      <button
+        className="text-xs font-medium text-slate-400 hover:text-slate-200"
+        onClick={() => setOpen((v) => !v)}
+      >
+        {open ? '▾' : '▸'} 🎯 Muscles{count > 0 ? ` (${count})` : ' — not set'}
+      </button>
+      {open && (
+        <div className="mt-2">
+          <MuscleEditor
+            name={name}
+            value={muscles}
+            onChange={(m) => setExerciseMuscles(dayId, exId, m)}
+            onSaveToLibrary={() => {
+              setLibraryMuscles(name, muscles ?? {})
+              alert(`Saved "${name}" to your exercise library.`)
+            }}
+          />
         </div>
       )}
     </div>

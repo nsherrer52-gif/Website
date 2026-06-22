@@ -3,13 +3,18 @@ import { useNavigate } from 'react-router-dom'
 import { useStore, useActiveProfile } from '../store/useStore'
 import { suggestedDayId } from '../lib/rotation'
 import { formatDate } from '../lib/date'
+import { currentWeekKey, currentWeekVolume, doneSetCount, isoWeekKey, roundVol } from '../lib/volume'
+import { DEFAULT_MUSCLE_TARGETS, muscleName } from '../lib/muscles'
 import { PageHeader, EmptyState, Stat } from '../components/ui'
+import { MuscleVolumeBar } from '../components/MuscleVolumeBar'
 
 export function TodayPage() {
   const navigate = useNavigate()
   const profile = useActiveProfile()
   const program = useStore((s) => s.program)
   const sessions = useStore((s) => s.sessions)
+  const library = useStore((s) => s.exerciseLibrary)
+  const targets = useStore((s) => s.muscleTargets)
   const startSession = useStore((s) => s.startSession)
 
   const mySessions = useMemo(
@@ -34,6 +39,23 @@ export function TodayPage() {
   }, [])
   const thisWeekCount = completed.filter((s) => s.date >= startOfWeek).length
 
+  const pid = profile?.id ?? ''
+  const weekVolume = useMemo(() => currentWeekVolume(sessions, pid, library), [sessions, pid, library])
+  const topMuscles = useMemo(
+    () =>
+      Object.entries(weekVolume)
+        .filter(([, v]) => v > 0)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 4),
+    [weekVolume],
+  )
+  const weekSets = useMemo(() => {
+    const key = currentWeekKey()
+    return sessions
+      .filter((s) => s.profileId === pid && isoWeekKey(s.date) === key)
+      .reduce((n, s) => n + s.exercises.reduce((m, e) => m + doneSetCount(e), 0), 0)
+  }, [sessions, pid])
+
   function start(dayId: string) {
     const id = startSession(dayId)
     navigate(`/workout/${id}`)
@@ -47,6 +69,35 @@ export function TodayPage() {
         <Stat label="This week" value={`${thisWeekCount} workout${thisWeekCount === 1 ? '' : 's'}`} accent={profile?.color} />
         <Stat label="Last workout" value={lastWorkout ? formatDate(lastWorkout.date) : '—'} />
       </div>
+
+      {/* This week's muscle volume */}
+      <section className="card space-y-3 p-4">
+        <div className="flex items-center justify-between">
+          <h2 className="font-semibold">This week's volume</h2>
+          <button className="text-sm font-medium text-sky-400" onClick={() => navigate('/progress?tab=muscles')}>
+            View all →
+          </button>
+        </div>
+        {topMuscles.length === 0 ? (
+          <p className="text-sm text-slate-400">No sets logged yet this week. Time to train! 💪</p>
+        ) : (
+          <>
+            <p className="text-sm text-slate-400">
+              {roundVol(weekSets)} working sets · {Object.values(weekVolume).filter((v) => v > 0).length} muscles
+            </p>
+            <div className="space-y-2.5">
+              {topMuscles.map(([id, sets]) => (
+                <MuscleVolumeBar
+                  key={id}
+                  name={muscleName(id)}
+                  sets={sets}
+                  target={targets[id] ?? DEFAULT_MUSCLE_TARGETS[id]}
+                />
+              ))}
+            </div>
+          </>
+        )}
+      </section>
 
       {/* Resume any unfinished workouts */}
       {inProgress.length > 0 && (

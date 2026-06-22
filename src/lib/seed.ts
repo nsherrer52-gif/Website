@@ -1,5 +1,12 @@
 import type { PersistedData, Program, Profile } from '../types'
 import { uid } from './id'
+import { DEFAULT_MUSCLE_TARGETS } from './muscles'
+import { resolveMuscles } from './exerciseLibrary'
+
+/** Build a program exercise, auto-attaching its muscle map from the library. */
+function ex(name: string, targetSets: number, targetReps: string) {
+  return { id: uid(), name, targetSets, targetReps, muscles: resolveMuscles(name) }
+}
 
 /**
  * A sensible starter program: a 3-day Push / Pull / Legs rotation.
@@ -15,33 +22,33 @@ export function defaultProgram(): Program {
         id: uid(),
         name: 'Day A — Push',
         exercises: [
-          { id: uid(), name: 'Barbell Bench Press', targetSets: 4, targetReps: '6-8' },
-          { id: uid(), name: 'Overhead Press', targetSets: 3, targetReps: '8-10' },
-          { id: uid(), name: 'Incline Dumbbell Press', targetSets: 3, targetReps: '8-12' },
-          { id: uid(), name: 'Lateral Raise', targetSets: 3, targetReps: '12-15' },
-          { id: uid(), name: 'Triceps Pushdown', targetSets: 3, targetReps: '10-15' },
+          ex('Barbell Bench Press', 4, '6-8'),
+          ex('Overhead Press', 3, '8-10'),
+          ex('Incline Dumbbell Press', 3, '8-12'),
+          ex('Lateral Raise', 3, '12-15'),
+          ex('Triceps Pushdown', 3, '10-15'),
         ],
       },
       {
         id: uid(),
         name: 'Day B — Pull',
         exercises: [
-          { id: uid(), name: 'Deadlift', targetSets: 3, targetReps: '5' },
-          { id: uid(), name: 'Pull-Up', targetSets: 3, targetReps: '6-10' },
-          { id: uid(), name: 'Barbell Row', targetSets: 3, targetReps: '8-10' },
-          { id: uid(), name: 'Face Pull', targetSets: 3, targetReps: '12-15' },
-          { id: uid(), name: 'Barbell Curl', targetSets: 3, targetReps: '8-12' },
+          ex('Deadlift', 3, '5'),
+          ex('Pull-Up', 3, '6-10'),
+          ex('Barbell Row', 3, '8-10'),
+          ex('Face Pull', 3, '12-15'),
+          ex('Barbell Curl', 3, '8-12'),
         ],
       },
       {
         id: uid(),
         name: 'Day C — Legs',
         exercises: [
-          { id: uid(), name: 'Back Squat', targetSets: 4, targetReps: '6-8' },
-          { id: uid(), name: 'Romanian Deadlift', targetSets: 3, targetReps: '8-10' },
-          { id: uid(), name: 'Leg Press', targetSets: 3, targetReps: '10-12' },
-          { id: uid(), name: 'Leg Curl', targetSets: 3, targetReps: '10-15' },
-          { id: uid(), name: 'Standing Calf Raise', targetSets: 4, targetReps: '12-20' },
+          ex('Back Squat', 4, '6-8'),
+          ex('Romanian Deadlift', 3, '8-10'),
+          ex('Leg Press', 3, '10-12'),
+          ex('Leg Curl', 3, '10-15'),
+          ex('Standing Calf Raise', 4, '12-20'),
         ],
       },
     ],
@@ -69,7 +76,9 @@ export function seedData(): PersistedData {
     sessions: [],
     body: [],
     measurementFields: ['Waist', 'Chest', 'Arms', 'Thighs'],
-    version: 1,
+    exerciseLibrary: {},
+    muscleTargets: { ...DEFAULT_MUSCLE_TARGETS },
+    version: 2,
   }
 }
 

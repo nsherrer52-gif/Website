@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import { useStore } from '../store/useStore'
 import { todayISO } from '../lib/date'
+import { DEFAULT_MUSCLE_TARGETS, musclesByRegion } from '../lib/muscles'
 import { PageHeader } from '../components/ui'
 import type { PersistedData } from '../types'
 
@@ -177,6 +178,9 @@ export function SettingsPage() {
         </div>
       </section>
 
+      {/* Weekly volume targets */}
+      <MuscleTargetsSection />
+
       {/* Backup */}
       <section className="space-y-3">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-400">
@@ -227,7 +231,65 @@ export function SettingsPage() {
         </div>
       </section>
 
-      <p className="pb-2 text-center text-xs text-slate-600">Gym Tracker · v1.0 · data stored on this device</p>
+      <p className="pb-2 text-center text-xs text-slate-600">Gym Tracker · v2.0 · data stored on this device</p>
     </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+
+/** Editable weekly set-range goals per muscle, grouped by region. */
+function MuscleTargetsSection() {
+  const targets = useStore((s) => s.muscleTargets)
+  const setMuscleTarget = useStore((s) => s.setMuscleTarget)
+
+  return (
+    <section className="space-y-3">
+      <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-400">
+        Weekly volume targets
+      </h2>
+      <div className="card space-y-4 p-4">
+        <p className="text-sm text-slate-400">
+          Set the weekly working-set range you're aiming for per muscle. Bars on the Muscles tab
+          turn green when you land inside the range.
+        </p>
+        {musclesByRegion().map(({ region, muscles }) => (
+          <div key={region} className="space-y-2">
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">{region}</h3>
+            {muscles.map((m) => {
+              const t = targets[m.id] ?? DEFAULT_MUSCLE_TARGETS[m.id]
+              return (
+                <div key={m.id} className="flex items-center gap-2">
+                  <span className="flex-1 text-sm">{m.name}</span>
+                  <input
+                    aria-label={`${m.name} minimum`}
+                    type="number"
+                    inputMode="numeric"
+                    min={0}
+                    value={t.min}
+                    onChange={(e) =>
+                      setMuscleTarget(m.id, { min: Math.max(0, Number(e.target.value) || 0), max: t.max })
+                    }
+                    className="input w-16 px-2 py-1.5 text-center"
+                  />
+                  <span className="text-slate-500">–</span>
+                  <input
+                    aria-label={`${m.name} maximum`}
+                    type="number"
+                    inputMode="numeric"
+                    min={0}
+                    value={t.max}
+                    onChange={(e) =>
+                      setMuscleTarget(m.id, { min: t.min, max: Math.max(t.min, Number(e.target.value) || 0) })
+                    }
+                    className="input w-16 px-2 py-1.5 text-center"
+                  />
+                </div>
+              )
+            })}
+          </div>
+        ))}
+      </div>
+    </section>
   )
 }

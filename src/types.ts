@@ -11,6 +11,16 @@ export type ID = string
 /** A unit of measure for weight. Each profile picks one. */
 export type WeightUnit = 'lb' | 'kg'
 
+/** Identifier for a muscle group, e.g. 'chest', 'triceps' (see src/lib/muscles.ts). */
+export type MuscleId = string
+
+/**
+ * How much an exercise trains each muscle, as a fraction of a "set".
+ * 1.0 = a full working set for that muscle, 0.5 = a half / assisting set.
+ * Example (Barbell Bench Press): { chest: 1, triceps: 0.5, frontDelts: 0.5 }.
+ */
+export type MuscleContribution = Record<MuscleId, number>
+
 // --- The program (shared by everyone) --------------------------------------
 
 /** A single exercise as it appears in the program template. */
@@ -22,6 +32,11 @@ export interface Exercise {
   /** Planned rep range as free text, e.g. "8-12" or "5". */
   targetReps: string
   notes?: string
+  /**
+   * Optional per-exercise muscle override. When absent, muscles are resolved by
+   * name from the exercise library (see src/lib/exerciseLibrary.ts).
+   */
+  muscles?: MuscleContribution
 }
 
 /** One workout in the rotation, e.g. "Day A — Push". */
@@ -63,6 +78,12 @@ export interface LoggedExercise {
   targetReps?: string
   sets: SetEntry[]
   notes?: string
+  /**
+   * Muscle map snapshotted at log time so weekly volume stays accurate even if
+   * the program/library changes later. Older (v1) sessions won't have this and
+   * fall back to resolving by name.
+   */
+  muscles?: MuscleContribution
 }
 
 /** A complete (or in-progress) workout for one profile on one date. */
@@ -107,6 +128,12 @@ export interface Profile {
 
 // --- The whole persisted blob ----------------------------------------------
 
+/** A weekly set-count goal range for a muscle, e.g. { min: 10, max: 20 }. */
+export interface MuscleTarget {
+  min: number
+  max: number
+}
+
 export interface PersistedData {
   profiles: Profile[]
   activeProfileId: ID
@@ -115,6 +142,13 @@ export interface PersistedData {
   body: BodyEntry[]
   /** Configurable list of body-measurement fields, e.g. ["Waist","Chest"]. */
   measurementFields: string[]
+  /**
+   * User overrides/additions to the built-in exercise library, keyed by
+   * normalized exercise name. Merged over the code defaults at read time.
+   */
+  exerciseLibrary: Record<string, MuscleContribution>
+  /** Editable weekly volume goals per muscle. */
+  muscleTargets: Record<MuscleId, MuscleTarget>
   /** Schema version, so we can migrate old backups if the model changes. */
   version: number
 }

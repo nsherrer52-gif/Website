@@ -4,6 +4,9 @@ import type {
   BodyEntry,
   Exercise,
   ID,
+  MuscleContribution,
+  MuscleId,
+  MuscleTarget,
   PersistedData,
   Profile,
   Program,
@@ -15,6 +18,8 @@ import type {
 import { uid } from '../lib/id'
 import { todayISO } from '../lib/date'
 import { makeProfile, seedData } from '../lib/seed'
+import { hasMuscles, normalizeName, resolveMuscles } from '../lib/exerciseLibrary'
+import { DEFAULT_MUSCLE_TARGETS } from '../lib/muscles'
 
 const STORAGE_KEY = 'gym-tracker-v1'
 
@@ -55,8 +60,13 @@ interface Actions {
   moveDay: (dayId: ID, dir: -1 | 1) => void
   addExercise: (dayId: ID, ex: Omit<Exercise, 'id'>) => void
   updateExercise: (dayId: ID, exId: ID, patch: Partial<Exercise>) => void
+  setExerciseMuscles: (dayId: ID, exId: ID, muscles: MuscleContribution) => void
   deleteExercise: (dayId: ID, exId: ID) => void
   moveExercise: (dayId: ID, exId: ID, dir: -1 | 1) => void
+
+  // Muscle library & targets
+  setLibraryMuscles: (name: string, muscles: MuscleContribution) => void
+  setMuscleTarget: (id: MuscleId, target: MuscleTarget) => void
 
   // Sessions
   startSession: (dayId: ID) => ID
@@ -156,14 +166,25 @@ export const useStore = create<StoreState>()(
         }),
 
       addExercise: (dayId, ex) =>
-        set((s) => ({
-          program: {
-            ...s.program,
-            days: s.program.days.map((d) =>
-              d.id === dayId ? { ...d, exercises: [...d.exercises, { ...ex, id: uid() }] } : d,
-            ),
-          },
-        })),
+        set((s) => {
+          // Auto-fill the muscle map from the library when not supplied.
+          const muscles = hasMuscles(ex.muscles)
+            ? ex.muscles
+            : resolveMuscles(ex.name, undefined, s.exerciseLibrary)
+          const newEx: Exercise = {
+            ...ex,
+            id: uid(),
+            ...(hasMuscles(muscles) ? { muscles } : {}),
+          }
+          return {
+            program: {
+              ...s.program,
+              days: s.program.days.map((d) =>
+                d.id === dayId ? { ...d, exercises: [...d.exercises, newEx] } : d,
+              ),
+            },
+          }
+        }),
 
       updateExercise: (dayId, exId, patch) =>
         set((s) => ({
@@ -171,6 +192,16 @@ export const useStore = create<StoreState>()(
             ...s.program,
             days: s.program.days.map((d) =>
               d.id === dayId ? { ...d, exercises: replaceById(d.exercises, exId, patch) } : d,
+            ),
+          },
+        })),
+
+      setExerciseMuscles: (dayId, exId, muscles) =>
+        set((s) => ({
+          program: {
+            ...s.program,
+            days: s.program.days.map((d) =>
+              d.id === dayId ? { ...d, exercises: replaceById(d.exercises, exId, { muscles }) } : d,
             ),
           },
         })),
@@ -197,6 +228,19 @@ export const useStore = create<StoreState>()(
           },
         })),
 
+      // --- Muscle library & targets ----------------------------------------
+      setLibraryMuscles: (name, muscles) =>
+        set((s) => {
+          const key = normalizeName(name)
+          const exerciseLibrary = { ...s.exerciseLibrary }
+          if (hasMuscles(muscles)) exerciseLibrary[key] = muscles
+          else delete exerciseLibrary[key]
+          return { exerciseLibrary }
+        }),
+
+      setMuscleTarget: (id, target) =>
+        set((s) => ({ muscleTargets: { ...s.muscleTargets, [id]: target } })),
+
       // --- Sessions --------------------------------------------------------
       startSession: (dayId) => {
         const s = get()
@@ -214,6 +258,8 @@ export const useStore = create<StoreState>()(
             name: ex.name,
             targetReps: ex.targetReps,
             notes: undefined,
+            // Snapshot the muscle map so weekly volume stays accurate later.
+            muscles: resolveMuscles(ex.name, ex.muscles, s.exerciseLibrary),
             sets: Array.from({ length: Math.max(1, ex.targetSets) }, () => ({
               id: uid(),
               reps: null,
@@ -279,6 +325,7 @@ export const useStore = create<StoreState>()(
                     {
                       exerciseId: uid(),
                       name: name.trim() || 'Exercise',
+                      muscles: resolveMuscles(name, undefined, s.exerciseLibrary),
                       sets: [{ id: uid(), reps: null, weight: null, done: false }],
                     },
                   ],
@@ -340,6 +387,8 @@ export const useStore = create<StoreState>()(
           sessions: s.sessions,
           body: s.body,
           measurementFields: s.measurementFields,
+          exerciseLibrary: s.exerciseLibrary,
+          muscleTargets: s.muscleTargets,
           version: s.version,
         }
       },
@@ -352,7 +401,10 @@ export const useStore = create<StoreState>()(
           sessions: data.sessions ?? [],
           body: (data.body ?? []).map((b) => ({ ...b, measurements: b.measurements ?? {} })),
           measurementFields: data.measurementFields ?? [],
-          version: data.version ?? 1,
+          // v1 backups won't have these — fall back to defaults.
+          exerciseLibrary: data.exerciseLibrary ?? {},
+          muscleTargets: data.muscleTargets ?? { ...DEFAULT_MUSCLE_TARGETS },
+          version: data.version ?? 2,
         })),
 
       resetAll: () => set(() => ({ ...seedData() })),
@@ -366,6 +418,8 @@ export const useStore = create<StoreState>()(
         sessions: s.sessions,
         body: s.body,
         measurementFields: s.measurementFields,
+        exerciseLibrary: s.exerciseLibrary,
+        muscleTargets: s.muscleTargets,
         version: s.version,
       }),
     },
