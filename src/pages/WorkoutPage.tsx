@@ -180,18 +180,28 @@ function ExerciseCard({
   last: { date: string; exercise: LoggedExercise } | null
   unit: string
   isPR: boolean
-  onSetChange: (setId: string, patch: { reps?: number | null; weight?: number | null; done?: boolean }) => void
+  onSetChange: (
+    setId: string,
+    patch: { reps?: number | null; weight?: number | null; done?: boolean; rir?: number | null },
+  ) => void
   onAddSet: () => void
   onRemoveSet: (setId: string) => void
   onNotes: (notes: string) => void
 }) {
   const [showNotes, setShowNotes] = useState(!!ex.notes)
+  const [showRIR, setShowRIR] = useState(() => ex.sets.some((s) => s.rir != null))
   const weightStep = unit === 'kg' ? 2.5 : 5
+
+  const grid = showRIR
+    ? 'grid grid-cols-[1.5rem_1fr_1fr_2.75rem_2.25rem_1.25rem] items-center gap-1.5'
+    : 'grid grid-cols-[1.5rem_1fr_1fr_2.25rem_1.25rem] items-center gap-1.5'
 
   const muscleHint = Object.entries(ex.muscles ?? {})
     .filter(([, v]) => v > 0)
     .map(([id, v]) => `${muscleName(id)} ${v === 1 ? '1' : '½'}`)
     .join(' · ')
+
+  const suggestion = ex.suggestion
 
   return (
     <div className="card p-4">
@@ -205,6 +215,22 @@ function ExerciseCard({
 
       {muscleHint && <div className="mt-0.5 text-xs text-slate-500">{muscleHint}</div>}
 
+      {/* The coach's prescription for this session */}
+      {suggestion && suggestion.action !== 'baseline' && (
+        <div className="mt-2 rounded-lg border border-sky-500/30 bg-sky-500/10 px-3 py-2 text-xs">
+          <span className="font-semibold text-sky-300">
+            🎯 Target: {suggestion.weight != null ? `${suggestion.weight} ${unit} × ` : ''}
+            {suggestion.reps} reps
+          </span>
+          <span className="ml-1 text-slate-400">— {suggestion.note}</span>
+        </div>
+      )}
+      {suggestion && suggestion.action === 'baseline' && (
+        <div className="mt-2 rounded-lg border border-slate-600/50 bg-slate-700/20 px-3 py-2 text-xs text-slate-400">
+          🎯 {suggestion.note}
+        </div>
+      )}
+
       {last && (
         <div className="mt-1 text-xs text-slate-400">
           Last time: <span className="text-slate-300">{summarizeSets(last.exercise)}</span>
@@ -212,20 +238,18 @@ function ExerciseCard({
       )}
 
       {/* Column headers */}
-      <div className="mt-3 grid grid-cols-[1.5rem_1fr_1fr_2.25rem_1.25rem] items-center gap-1.5 text-[11px] uppercase tracking-wide text-slate-500">
+      <div className={`mt-3 ${grid} text-[11px] uppercase tracking-wide text-slate-500`}>
         <span>Set</span>
         <span className="pl-2">{unit}</span>
         <span className="pl-2">Reps</span>
+        {showRIR && <span className="text-center">RIR</span>}
         <span className="text-center">Done</span>
         <span />
       </div>
 
       <div className="mt-1 space-y-1.5">
         {ex.sets.map((s, i) => (
-          <div
-            key={s.id}
-            className="grid grid-cols-[1.5rem_1fr_1fr_2.25rem_1.25rem] items-center gap-1.5"
-          >
+          <div key={s.id} className={grid}>
             <span className="text-center text-sm font-semibold text-slate-400">{i + 1}</span>
             <Stepper
               value={s.weight}
@@ -239,6 +263,23 @@ function ExerciseCard({
               ariaLabel="reps"
               onChange={(v) => onSetChange(s.id, { reps: v })}
             />
+            {showRIR && (
+              <select
+                aria-label="Reps in reserve"
+                value={s.rir ?? ''}
+                onChange={(e) =>
+                  onSetChange(s.id, { rir: e.target.value === '' ? null : Number(e.target.value) })
+                }
+                className="h-9 w-full rounded-lg border border-slate-700 bg-slate-900/70 text-center text-sm text-slate-100 outline-none focus:border-sky-500"
+              >
+                <option value="">–</option>
+                {[0, 1, 2, 3, 4].map((n) => (
+                  <option key={n} value={n}>
+                    {n}
+                  </option>
+                ))}
+              </select>
+            )}
             <button
               aria-label={s.done ? 'Mark set not done' : 'Mark set done'}
               onClick={() => onSetChange(s.id, { done: !s.done })}
@@ -264,6 +305,13 @@ function ExerciseCard({
       <div className="mt-3 flex items-center gap-2">
         <button className="btn-ghost flex-1 py-2 text-sm" onClick={onAddSet}>
           + Add set
+        </button>
+        <button
+          className={`btn-ghost py-2 text-sm ${showRIR ? 'text-sky-300' : ''}`}
+          title="Log reps-in-reserve (how many more reps you had)"
+          onClick={() => setShowRIR((v) => !v)}
+        >
+          RIR
         </button>
         <button
           className="btn-ghost py-2 text-sm"

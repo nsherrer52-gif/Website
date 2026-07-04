@@ -15,20 +15,31 @@ export interface ChartPoint {
   value: number
 }
 
+interface Row {
+  label: string
+  value?: number
+  projected?: number
+}
+
 /**
  * A small reusable line chart in a card. Renders a friendly empty state when
- * there isn't enough data yet.
+ * there isn't enough data yet. When `projection` points are supplied they are
+ * drawn as a dashed continuation of the line (a forecast).
  */
 export function LineChartCard({
   title,
   unit,
   color = '#38bdf8',
   data,
+  projection,
+  trendNote,
 }: {
   title: string
   unit?: string
   color?: string
   data: ChartPoint[]
+  projection?: ChartPoint[]
+  trendNote?: string
 }) {
   if (data.length === 0) {
     return (
@@ -36,6 +47,13 @@ export function LineChartCard({
         Log a couple of entries and your progress will chart here.
       </EmptyState>
     )
+  }
+
+  const rows: Row[] = data.map((d) => ({ label: d.label, value: d.value }))
+  if (projection && projection.length > 0) {
+    // Bridge the dashed line to the last actual point so they connect.
+    rows[rows.length - 1] = { ...rows[rows.length - 1], projected: data[data.length - 1].value }
+    for (const p of projection) rows.push({ label: p.label, projected: p.value })
   }
 
   return (
@@ -46,7 +64,7 @@ export function LineChartCard({
       </div>
       <div className="h-56 w-full">
         <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={data} margin={{ top: 5, right: 8, left: -16, bottom: 0 }}>
+          <LineChart data={rows} margin={{ top: 5, right: 8, left: -16, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />
             <XAxis dataKey="label" stroke="#64748b" fontSize={11} tickMargin={8} />
             <YAxis stroke="#64748b" fontSize={11} domain={['auto', 'auto']} width={44} />
@@ -62,15 +80,30 @@ export function LineChartCard({
             <Line
               type="monotone"
               dataKey="value"
+              name="actual"
               stroke={color}
               strokeWidth={2.5}
               dot={{ r: 3, fill: color }}
               activeDot={{ r: 5 }}
               isAnimationActive={false}
             />
+            {projection && projection.length > 0 && (
+              <Line
+                type="monotone"
+                dataKey="projected"
+                name="projected"
+                stroke={color}
+                strokeOpacity={0.55}
+                strokeWidth={2}
+                strokeDasharray="6 5"
+                dot={false}
+                isAnimationActive={false}
+              />
+            )}
           </LineChart>
         </ResponsiveContainer>
       </div>
+      {trendNote && <p className="mt-2 text-xs text-slate-400">{trendNote}</p>}
     </div>
   )
 }

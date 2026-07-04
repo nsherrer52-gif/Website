@@ -5,6 +5,7 @@ import { loggedExerciseNames, summarizeSets } from '../lib/history'
 import { bestEstimated1RM, topSetWeight, totalVolume, sessionVolume, round1 } from '../lib/stats'
 import { formatShort, formatDate } from '../lib/date'
 import { computePRSet, prKey } from '../lib/pr'
+import { projectTrend, type DatedPoint } from '../lib/progression'
 import { PageHeader, EmptyState, Stat } from '../components/ui'
 import { LineChartCard, type ChartPoint } from '../components/LineChartCard'
 import { MusclesTab } from './MusclesTab'
@@ -68,13 +69,14 @@ function ChartsTab() {
 
   const exercise = selected || names[0] || ''
 
-  const { points, best } = useMemo(() => {
+  const { points, best, projection, trendNote } = useMemo(() => {
     const rows = sessions
       .filter((s) => s.exercises.some((e) => e.name.toLowerCase() === exercise.toLowerCase()))
       .slice()
       .sort((a, b) => a.date.localeCompare(b.date))
 
     const pts: ChartPoint[] = []
+    const dated: DatedPoint[] = []
     let bestVal = 0
     for (const s of rows) {
       const ex = s.exercises.find((e) => e.name.toLowerCase() === exercise.toLowerCase())!
@@ -85,10 +87,27 @@ function ChartsTab() {
       value = round1(value)
       if (value > 0) {
         pts.push({ label: formatShort(s.date), value })
+        dated.push({ date: s.date, value })
         bestVal = Math.max(bestVal, value)
       }
     }
-    return { points: pts, best: bestVal }
+
+    // Forecast: fit a line through the history and project 4 weeks forward.
+    const trend = projectTrend(dated, 4)
+    let proj: ChartPoint[] | undefined
+    let note: string | undefined
+    if (trend) {
+      proj = trend.points.map((p) => ({ label: formatShort(p.date), value: p.value }))
+      const eta = trend.points[trend.points.length - 1].value
+      if (trend.slopePerWeek > 0.05) {
+        note = `Trending +${trend.slopePerWeek}/week — on pace for ~${eta} in 4 weeks (dashed line).`
+      } else if (trend.slopePerWeek < -0.05) {
+        note = `Trending ${trend.slopePerWeek}/week — consider a deload or a form/recovery check.`
+      } else {
+        note = 'Holding steady — to keep progressing, follow the in-workout targets or add a set.'
+      }
+    }
+    return { points: pts, best: bestVal, projection: proj, trendNote: note }
   }, [sessions, exercise, metric])
 
   if (names.length === 0) {
@@ -147,6 +166,8 @@ function ChartsTab() {
         unit={unit}
         color={profile?.color}
         data={points}
+        projection={projection}
+        trendNote={trendNote}
       />
       <p className="px-1 text-xs text-slate-500">
         Estimated 1RM uses the Epley formula (weight × (1 + reps ÷ 30)). It's an estimate to track

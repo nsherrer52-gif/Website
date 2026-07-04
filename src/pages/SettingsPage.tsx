@@ -231,7 +231,7 @@ export function SettingsPage() {
         </div>
       </section>
 
-      <p className="pb-2 text-center text-xs text-slate-600">Gym Tracker · v2.0 · data stored on this device</p>
+      <p className="pb-2 text-center text-xs text-slate-600">Gym Tracker · v3.0 · data stored on this device</p>
     </div>
   )
 }
@@ -251,7 +251,8 @@ function MuscleTargetsSection() {
       <div className="card space-y-4 p-4">
         <p className="text-sm text-slate-400">
           Set the weekly working-set range you're aiming for per muscle. Bars on the Muscles tab
-          turn green when you land inside the range.
+          turn green inside the range, and the coach uses the minimum as your starting volume and
+          the maximum as the ceiling it won't prescribe past.
         </p>
         {musclesByRegion().map(({ region, muscles }) => (
           <div key={region} className="space-y-2">

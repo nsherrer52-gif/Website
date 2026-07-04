@@ -65,6 +65,26 @@ export interface SetEntry {
   weight: number | null
   /** Marked complete by tapping the checkbox during the workout. */
   done: boolean
+  /**
+   * Optional reps-in-reserve: how many more reps you could have done
+   * (0 = to failure). Used by the coach to calibrate progression.
+   */
+  rir?: number | null
+}
+
+/**
+ * A next-session prescription computed from your history when a workout is
+ * started (double progression). Snapshotted onto the logged exercise so the
+ * target you trained against is preserved.
+ */
+export interface ExerciseSuggestion {
+  /** Suggested working weight, or null when there's no history yet. */
+  weight: number | null
+  /** Human-readable rep target, e.g. "8–12" or "9+". */
+  reps: string
+  /** Short explanation of why, e.g. "You hit the top of your range — add weight." */
+  note: string
+  action: 'add_weight' | 'add_reps' | 'baseline'
 }
 
 /**
@@ -84,6 +104,8 @@ export interface LoggedExercise {
    * fall back to resolving by name.
    */
   muscles?: MuscleContribution
+  /** Next-session target computed from history at session start (v3+). */
+  suggestion?: ExerciseSuggestion
 }
 
 /** A complete (or in-progress) workout for one profile on one date. */

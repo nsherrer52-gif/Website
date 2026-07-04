@@ -14,6 +14,12 @@ browser on your device. Back it up to a file anytime.
 - **Rotating split program** — build days (Day A / B / C …), add exercises with
   target sets and reps, and reorder everything. The app suggests your next day
   automatically, but you can start any day you like.
+- **Progressive-overload coach (v3)** — every workout comes with per-exercise
+  targets computed from your history via double progression ("you hit the top of
+  your rep range — add weight"), with optional RIR (reps-in-reserve) logging to
+  calibrate. Strength charts project a 4-week trend line, and a weekly volume
+  coach prescribes sets per muscle (build up → +1 set in range → hold at max →
+  deload after 4+ progressive weeks).
 - **Live workout logging** — pre-fills your planned sets, shows what you lifted
   *last time* so you know what to beat, and lets you tick off sets as you go.
 - **Two people, one app** — switch between profiles (e.g. you and your brother)

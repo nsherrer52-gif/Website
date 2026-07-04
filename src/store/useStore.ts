@@ -20,6 +20,8 @@ import { todayISO } from '../lib/date'
 import { makeProfile, seedData } from '../lib/seed'
 import { hasMuscles, normalizeName, resolveMuscles } from '../lib/exerciseLibrary'
 import { DEFAULT_MUSCLE_TARGETS } from '../lib/muscles'
+import { lastPerformance } from '../lib/history'
+import { suggestForExercise } from '../lib/progression'
 
 const STORAGE_KEY = 'gym-tracker-v1'
 
@@ -74,7 +76,7 @@ interface Actions {
     sessionId: ID,
     exIndex: number,
     setId: ID,
-    patch: Partial<{ reps: number | null; weight: number | null; done: boolean }>,
+    patch: Partial<{ reps: number | null; weight: number | null; done: boolean; rir: number | null }>,
   ) => void
   addSet: (sessionId: ID, exIndex: number) => void
   removeSet: (sessionId: ID, exIndex: number, setId: ID) => void
@@ -245,6 +247,8 @@ export const useStore = create<StoreState>()(
       startSession: (dayId) => {
         const s = get()
         const day = s.program.days.find((d) => d.id === dayId)
+        const profile = s.profiles.find((p) => p.id === s.activeProfileId)
+        const unit = profile?.unit ?? 'lb'
         const id = uid()
         const session: Session = {
           id,
@@ -253,20 +257,27 @@ export const useStore = create<StoreState>()(
           dayName: day?.name ?? 'Workout',
           date: todayISO(),
           startedAt: Date.now(),
-          exercises: (day?.exercises ?? []).map((ex) => ({
-            exerciseId: ex.id,
-            name: ex.name,
-            targetReps: ex.targetReps,
-            notes: undefined,
-            // Snapshot the muscle map so weekly volume stays accurate later.
-            muscles: resolveMuscles(ex.name, ex.muscles, s.exerciseLibrary),
-            sets: Array.from({ length: Math.max(1, ex.targetSets) }, () => ({
-              id: uid(),
-              reps: null,
-              weight: null,
-              done: false,
-            })),
-          })),
+          exercises: (day?.exercises ?? []).map((ex) => {
+            // Prescribe this session's target from the last time this exercise
+            // was performed (double progression), and pre-fill the weight.
+            const last = lastPerformance(s.sessions, s.activeProfileId, ex.name)
+            const suggestion = suggestForExercise(last?.exercise ?? null, unit, ex.targetReps)
+            return {
+              exerciseId: ex.id,
+              name: ex.name,
+              targetReps: ex.targetReps,
+              notes: undefined,
+              // Snapshot the muscle map so weekly volume stays accurate later.
+              muscles: resolveMuscles(ex.name, ex.muscles, s.exerciseLibrary),
+              suggestion,
+              sets: Array.from({ length: Math.max(1, ex.targetSets) }, () => ({
+                id: uid(),
+                reps: null,
+                weight: suggestion.weight,
+                done: false,
+              })),
+            }
+          }),
         }
         set((st) => ({ sessions: [...st.sessions, session] }))
         return id
@@ -404,7 +415,7 @@ export const useStore = create<StoreState>()(
           // v1 backups won't have these — fall back to defaults.
           exerciseLibrary: data.exerciseLibrary ?? {},
           muscleTargets: data.muscleTargets ?? { ...DEFAULT_MUSCLE_TARGETS },
-          version: data.version ?? 2,
+          version: data.version ?? 3,
         })),
 
       resetAll: () => set(() => ({ ...seedData() })),

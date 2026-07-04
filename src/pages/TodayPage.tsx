@@ -5,6 +5,7 @@ import { suggestedDayId } from '../lib/rotation'
 import { formatDate } from '../lib/date'
 import { currentWeekKey, currentWeekVolume, doneSetCount, isoWeekKey, roundVol } from '../lib/volume'
 import { DEFAULT_MUSCLE_TARGETS, muscleName } from '../lib/muscles'
+import { weeklyRecommendations } from '../lib/coach'
 import { PageHeader, EmptyState, Stat } from '../components/ui'
 import { MuscleVolumeBar } from '../components/MuscleVolumeBar'
 
@@ -56,6 +57,20 @@ export function TodayPage() {
       .reduce((n, s) => n + s.exercises.reduce((m, e) => m + doneSetCount(e), 0), 0)
   }, [sessions, pid])
 
+  const coachLine = useMemo(() => {
+    const recs = weeklyRecommendations(sessions, pid, library, targets)
+    const deloads = recs.filter((r) => r.action === 'deload').map((r) => muscleName(r.muscleId))
+    const adds = recs
+      .filter((r) => r.action === 'increase' && r.lastWeekSets > 0)
+      .sort((a, b) => b.lastWeekSets - a.lastWeekSets)
+      .slice(0, 3)
+      .map((r) => muscleName(r.muscleId))
+    const parts: string[] = []
+    if (adds.length > 0) parts.push(`add a set to ${adds.join(', ')}`)
+    if (deloads.length > 0) parts.push(`consider deloading ${deloads.join(', ')}`)
+    return parts.length > 0 ? `Coach: ${parts.join(' · ')}` : null
+  }, [sessions, pid, library, targets])
+
   function start(dayId: string) {
     const id = startSession(dayId)
     navigate(`/workout/${id}`)
@@ -97,6 +112,7 @@ export function TodayPage() {
             </div>
           </>
         )}
+        {coachLine && <p className="border-t border-slate-700/60 pt-2 text-xs text-sky-300/90">📣 {coachLine}</p>}
       </section>
 
       {/* Resume any unfinished workouts */}
