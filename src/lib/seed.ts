@@ -55,6 +55,12 @@ export function defaultProgram(): Program {
   }
 }
 
+export const DEFAULT_PREFS = {
+  restSeconds: 120,
+  barWeightLb: 45,
+  barWeightKg: 20,
+}
+
 const ACCENTS = ['#38bdf8', '#f472b6', '#34d399', '#fbbf24', '#a78bfa', '#fb7185']
 
 export function makeProfile(name: string, index = 0): Profile {
@@ -78,7 +84,8 @@ export function seedData(): PersistedData {
     measurementFields: ['Waist', 'Chest', 'Arms', 'Thighs'],
     exerciseLibrary: {},
     muscleTargets: { ...DEFAULT_MUSCLE_TARGETS },
-    version: 4,
+    prefs: { ...DEFAULT_PREFS },
+    version: 5,
   }
 }
 

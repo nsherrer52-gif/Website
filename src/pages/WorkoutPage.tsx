@@ -9,7 +9,9 @@ import { EmptyState } from '../components/ui'
 import { Stepper } from '../components/Stepper'
 import { ExerciseDatalist } from '../components/ExerciseDatalist'
 import { ExerciseSlotPicker } from '../components/ExerciseSlotPicker'
-import type { LoggedExercise, MuscleId } from '../types'
+import { RestTimer } from '../components/RestTimer'
+import { platesForUnit, platesPerSide, formatPlates } from '../lib/plates'
+import type { LoggedExercise, MuscleId, WeightUnit } from '../types'
 
 export function WorkoutPage() {
   const { id = '' } = useParams()
@@ -36,7 +38,9 @@ export function WorkoutPage() {
   const finishSession = useStore((s) => s.finishSession)
   const deleteSession = useStore((s) => s.deleteSession)
 
+  const prefs = useStore((s) => s.prefs)
   const [newExercise, setNewExercise] = useState('')
+  const [restEndsAt, setRestEndsAt] = useState<number | null>(null)
 
   if (!session) {
     return (
@@ -51,10 +55,24 @@ export function WorkoutPage() {
     0,
   )
   const totalSets = session.exercises.reduce((n, ex) => n + ex.sets.length, 0)
+  const barWeight = (profile?.unit ?? 'lb') === 'kg' ? prefs.barWeightKg : prefs.barWeightLb
+
+  function handleSetChange(
+    exIndex: number,
+    setId: string,
+    patch: { reps?: number | null; weight?: number | null; done?: boolean; rir?: number | null },
+  ) {
+    updateSet(session!.id, exIndex, setId, patch)
+    // Checking a set off starts the rest countdown (if enabled in Settings).
+    if (patch.done === true && prefs.restSeconds > 0 && !session!.completedAt) {
+      setRestEndsAt(Date.now() + prefs.restSeconds * 1000)
+    }
+  }
 
   function handleFinish() {
+    setRestEndsAt(null)
     finishSession(session!.id)
-    navigate('/progress')
+    navigate(`/summary/${session!.id}`)
   }
 
   function handleDelete() {
@@ -121,13 +139,22 @@ export function WorkoutPage() {
             ex={ex}
             last={lastPerformance(allSessions, session.profileId, ex.name, session.id)}
             unit={profile?.unit ?? 'lb'}
+            barWeight={barWeight}
             isPR={prs.has(prKey(session.id, exIndex))}
-            onSetChange={(setId, patch) => updateSet(session.id, exIndex, setId, patch)}
+            onSetChange={(setId, patch) => handleSetChange(exIndex, setId, patch)}
             onAddSet={() => addSet(session.id, exIndex)}
             onRemoveSet={(setId) => removeSet(session.id, exIndex, setId)}
             onNotes={(notes) => setExerciseNotes(session.id, exIndex, notes)}
           />
         ),
+      )}
+
+      {restEndsAt !== null && (
+        <RestTimer
+          endsAt={restEndsAt}
+          onExtend={(ms) => setRestEndsAt((v) => (v ?? Date.now()) + ms)}
+          onDismiss={() => setRestEndsAt(null)}
+        />
       )}
 
       {/* Add extra exercise */}
@@ -181,6 +208,49 @@ export function WorkoutPage() {
 
 // ---------------------------------------------------------------------------
 
+/** Per-side plate loading for each distinct weight in this exercise's sets. */
+function PlatePanel({ ex, unit, barWeight }: { ex: LoggedExercise; unit: WeightUnit; barWeight: number }) {
+  const plates = platesForUnit(unit)
+  const weights = [...new Set(ex.sets.map((s) => s.weight).filter((w): w is number => w != null))]
+
+  return (
+    <div className="mt-2 rounded-lg bg-slate-900/60 p-3 text-sm">
+      <div className="mb-1.5 flex items-baseline justify-between">
+        <span className="font-semibold text-slate-300">Plates per side</span>
+        <span className="text-xs text-slate-500">
+          {barWeight} {unit} bar — change in Settings
+        </span>
+      </div>
+      {weights.length === 0 ? (
+        <p className="text-slate-500">Enter a weight above to see the plate math.</p>
+      ) : (
+        <div className="space-y-1">
+          {weights.map((w) => {
+            const b = platesPerSide(w, barWeight, plates)
+            return (
+              <div key={w} className="flex items-baseline justify-between gap-3">
+                <span className="font-mono font-semibold tabular-nums">{w}</span>
+                <span className="text-right text-slate-300">
+                  {b == null
+                    ? 'below bar weight'
+                    : b.counts.length === 0
+                      ? 'empty bar'
+                      : formatPlates(b)}
+                  {b != null && b.remainder > 0 && (
+                    <span className="text-amber-400"> (~{b.remainder} short)</span>
+                  )}
+                </span>
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+
 /** An unfilled muscle slot: choose the exercise now, based on what's free. */
 function SlotCard({
   muscleId,
@@ -219,6 +289,7 @@ function ExerciseCard({
   ex,
   last,
   unit,
+  barWeight,
   isPR,
   onSetChange,
   onAddSet,
@@ -228,6 +299,7 @@ function ExerciseCard({
   ex: LoggedExercise
   last: { date: string; exercise: LoggedExercise } | null
   unit: string
+  barWeight: number
   isPR: boolean
   onSetChange: (
     setId: string,
@@ -239,6 +311,7 @@ function ExerciseCard({
 }) {
   const [showNotes, setShowNotes] = useState(!!ex.notes)
   const [showRIR, setShowRIR] = useState(() => ex.sets.some((s) => s.rir != null))
+  const [showPlates, setShowPlates] = useState(false)
   const weightStep = unit === 'kg' ? 2.5 : 5
 
   const grid = showRIR
@@ -356,6 +429,13 @@ function ExerciseCard({
           + Add set
         </button>
         <button
+          className={`btn-ghost py-2 text-sm ${showPlates ? 'text-sky-300' : ''}`}
+          title="Plate calculator"
+          onClick={() => setShowPlates((v) => !v)}
+        >
+          🏋️
+        </button>
+        <button
           className={`btn-ghost py-2 text-sm ${showRIR ? 'text-sky-300' : ''}`}
           title="Log reps-in-reserve (how many more reps you had)"
           onClick={() => setShowRIR((v) => !v)}
@@ -369,6 +449,8 @@ function ExerciseCard({
           {showNotes ? 'Hide note' : 'Note'}
         </button>
       </div>
+
+      {showPlates && <PlatePanel ex={ex} unit={unit as WeightUnit} barWeight={barWeight} />}
 
       {showNotes && (
         <textarea

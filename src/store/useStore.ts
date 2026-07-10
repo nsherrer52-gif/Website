@@ -8,6 +8,7 @@ import type {
   MuscleId,
   MuscleTarget,
   PersistedData,
+  Prefs,
   Profile,
   Program,
   Session,
@@ -17,7 +18,7 @@ import type {
 } from '../types'
 import { uid } from '../lib/id'
 import { todayISO } from '../lib/date'
-import { makeProfile, seedData } from '../lib/seed'
+import { DEFAULT_PREFS, makeProfile, seedData } from '../lib/seed'
 import { hasMuscles, normalizeName, resolveMuscles } from '../lib/exerciseLibrary'
 import { DEFAULT_MUSCLE_TARGETS } from '../lib/muscles'
 import { lastPerformance } from '../lib/history'
@@ -75,6 +76,7 @@ interface Actions {
   // Muscle library & targets
   setLibraryMuscles: (name: string, muscles: MuscleContribution) => void
   setMuscleTarget: (id: MuscleId, target: MuscleTarget) => void
+  setPrefs: (patch: Partial<Prefs>) => void
 
   // Sessions
   startSession: (dayId: ID) => ID
@@ -298,6 +300,8 @@ export const useStore = create<StoreState>()(
       setMuscleTarget: (id, target) =>
         set((s) => ({ muscleTargets: { ...s.muscleTargets, [id]: target } })),
 
+      setPrefs: (patch) => set((s) => ({ prefs: { ...s.prefs, ...patch } })),
+
       // --- Sessions --------------------------------------------------------
       startSession: (dayId) => {
         const s = get()
@@ -498,6 +502,7 @@ export const useStore = create<StoreState>()(
           measurementFields: s.measurementFields,
           exerciseLibrary: s.exerciseLibrary,
           muscleTargets: s.muscleTargets,
+          prefs: s.prefs,
           version: s.version,
         }
       },
@@ -513,7 +518,8 @@ export const useStore = create<StoreState>()(
           // v1 backups won't have these — fall back to defaults.
           exerciseLibrary: data.exerciseLibrary ?? {},
           muscleTargets: data.muscleTargets ?? { ...DEFAULT_MUSCLE_TARGETS },
-          version: data.version ?? 4,
+          prefs: { ...DEFAULT_PREFS, ...(data.prefs ?? {}) },
+          version: data.version ?? 5,
         })),
 
       resetAll: () => set(() => ({ ...seedData() })),
@@ -529,6 +535,7 @@ export const useStore = create<StoreState>()(
         measurementFields: s.measurementFields,
         exerciseLibrary: s.exerciseLibrary,
         muscleTargets: s.muscleTargets,
+        prefs: s.prefs,
         version: s.version,
       }),
     },

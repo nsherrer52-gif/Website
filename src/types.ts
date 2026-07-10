@@ -165,6 +165,15 @@ export interface MuscleTarget {
   max: number
 }
 
+/** Workout preferences (shared per device). */
+export interface Prefs {
+  /** Rest timer length in seconds; 0 disables the timer. */
+  restSeconds: number
+  /** Barbell weight used by the plate calculator, per unit. */
+  barWeightLb: number
+  barWeightKg: number
+}
+
 export interface PersistedData {
   profiles: Profile[]
   activeProfileId: ID
@@ -180,6 +189,8 @@ export interface PersistedData {
   exerciseLibrary: Record<string, MuscleContribution>
   /** Editable weekly volume goals per muscle. */
   muscleTargets: Record<MuscleId, MuscleTarget>
+  /** Rest timer + plate calculator preferences. */
+  prefs: Prefs
   /** Schema version, so we can migrate old backups if the model changes. */
   version: number
 }

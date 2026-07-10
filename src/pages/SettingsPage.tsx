@@ -178,6 +178,9 @@ export function SettingsPage() {
         </div>
       </section>
 
+      {/* Workout preferences */}
+      <PrefsSection />
+
       {/* Weekly volume targets */}
       <MuscleTargetsSection />
 
@@ -231,12 +234,84 @@ export function SettingsPage() {
         </div>
       </section>
 
-      <p className="pb-2 text-center text-xs text-slate-600">Gym Tracker · v4.0 · data stored on this device</p>
+      <p className="pb-2 text-center text-xs text-slate-600">Gym Tracker · v5.0 · data stored on this device</p>
     </div>
   )
 }
 
 // ---------------------------------------------------------------------------
+
+const REST_OPTIONS = [
+  { value: 0, label: 'Off' },
+  { value: 60, label: '1:00' },
+  { value: 90, label: '1:30' },
+  { value: 120, label: '2:00' },
+  { value: 150, label: '2:30' },
+  { value: 180, label: '3:00' },
+  { value: 240, label: '4:00' },
+]
+
+/** Rest timer + plate calculator preferences. */
+function PrefsSection() {
+  const prefs = useStore((s) => s.prefs)
+  const setPrefs = useStore((s) => s.setPrefs)
+
+  return (
+    <section className="space-y-3">
+      <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-400">Workout</h2>
+      <div className="card space-y-4 p-4">
+        <div>
+          <label className="label" htmlFor="rest-secs">
+            Rest timer (starts when you check off a set)
+          </label>
+          <select
+            id="rest-secs"
+            className="input"
+            value={prefs.restSeconds}
+            onChange={(e) => setPrefs({ restSeconds: Number(e.target.value) })}
+          >
+            {REST_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <span className="label">Barbell weight (for the 🏋️ plate calculator)</span>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="mb-1 block text-xs text-slate-500" htmlFor="bar-lb">
+                lb bar
+              </label>
+              <input
+                id="bar-lb"
+                type="number"
+                inputMode="decimal"
+                className="input"
+                value={prefs.barWeightLb}
+                onChange={(e) => setPrefs({ barWeightLb: Math.max(0, Number(e.target.value) || 0) })}
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs text-slate-500" htmlFor="bar-kg">
+                kg bar
+              </label>
+              <input
+                id="bar-kg"
+                type="number"
+                inputMode="decimal"
+                className="input"
+                value={prefs.barWeightKg}
+                onChange={(e) => setPrefs({ barWeightKg: Math.max(0, Number(e.target.value) || 0) })}
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  )
+}
 
 /** Editable weekly set-range goals per muscle, grouped by region. */
 function MuscleTargetsSection() {
