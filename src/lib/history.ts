@@ -35,7 +35,9 @@ export function loggedExerciseNames(sessions: Session[], profileId: ID): string[
   const names = new Set<string>()
   for (const s of sessions) {
     if (s.profileId !== profileId) continue
-    for (const e of s.exercises) names.add(e.name)
+    for (const e of s.exercises) {
+      if (e.name.trim()) names.add(e.name) // skip unfilled muscle slots
+    }
   }
   return [...names].sort((a, b) => a.localeCompare(b))
 }

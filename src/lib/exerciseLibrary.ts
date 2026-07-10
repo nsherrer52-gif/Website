@@ -93,6 +93,41 @@ export const DEFAULT_LIBRARY: Record<string, MuscleContribution> = Object.fromEn
   Object.entries(RAW).map(([name, muscles]) => [normalizeName(name), muscles]),
 )
 
+/** The built-in exercises with their display names, for pickers/autocomplete. */
+export interface LibraryExercise {
+  name: string
+  muscles: MuscleContribution
+}
+
+export const LIBRARY_EXERCISES: LibraryExercise[] = Object.entries(RAW).map(
+  ([name, muscles]) => ({ name, muscles }),
+)
+
+function titleCase(normalized: string): string {
+  return normalized.replace(/\b\w/g, (c) => c.toUpperCase())
+}
+
+/**
+ * Exercises that train a muscle with at least a half-set credit, for filling a
+ * muscle slot. Includes user library overrides. Full-credit movers sort first.
+ */
+export function exercisesForMuscle(
+  muscleId: string,
+  libraryOverrides?: Record<string, MuscleContribution>,
+): { name: string; value: number }[] {
+  const out = new Map<string, { name: string; value: number }>()
+  for (const ex of LIBRARY_EXERCISES) {
+    const v = ex.muscles[muscleId] ?? 0
+    if (v >= 0.5) out.set(normalizeName(ex.name), { name: ex.name, value: v })
+  }
+  for (const [key, muscles] of Object.entries(libraryOverrides ?? {})) {
+    const v = muscles[muscleId] ?? 0
+    if (v >= 0.5) out.set(key, { name: out.get(key)?.name ?? titleCase(key), value: v })
+    else out.delete(key) // an override that dropped this muscle wins over the default
+  }
+  return [...out.values()].sort((a, b) => b.value - a.value || a.name.localeCompare(b.name))
+}
+
 /** True if a contribution map has at least one muscle with a non-zero value. */
 export function hasMuscles(m: MuscleContribution | undefined): boolean {
   return !!m && Object.values(m).some((v) => v > 0)

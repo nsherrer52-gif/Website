@@ -7,7 +7,9 @@ import { computePRSet, prKey } from '../lib/pr'
 import { muscleName } from '../lib/muscles'
 import { EmptyState } from '../components/ui'
 import { Stepper } from '../components/Stepper'
-import type { LoggedExercise } from '../types'
+import { ExerciseDatalist } from '../components/ExerciseDatalist'
+import { ExerciseSlotPicker } from '../components/ExerciseSlotPicker'
+import type { LoggedExercise, MuscleId } from '../types'
 
 export function WorkoutPage() {
   const { id = '' } = useParams()
@@ -27,6 +29,7 @@ export function WorkoutPage() {
   const addSet = useStore((s) => s.addSet)
   const removeSet = useStore((s) => s.removeSet)
   const addExerciseToSession = useStore((s) => s.addExerciseToSession)
+  const fillSessionSlot = useStore((s) => s.fillSessionSlot)
   const setExerciseNotes = useStore((s) => s.setExerciseNotes)
   const setSessionNotes = useStore((s) => s.setSessionNotes)
   const setSessionDate = useStore((s) => s.setSessionDate)
@@ -103,24 +106,36 @@ export function WorkoutPage() {
         </EmptyState>
       )}
 
-      {session.exercises.map((ex, exIndex) => (
-        <ExerciseCard
-          key={ex.exerciseId + exIndex}
-          ex={ex}
-          last={lastPerformance(allSessions, session.profileId, ex.name, session.id)}
-          unit={profile?.unit ?? 'lb'}
-          isPR={prs.has(prKey(session.id, exIndex))}
-          onSetChange={(setId, patch) => updateSet(session.id, exIndex, setId, patch)}
-          onAddSet={() => addSet(session.id, exIndex)}
-          onRemoveSet={(setId) => removeSet(session.id, exIndex, setId)}
-          onNotes={(notes) => setExerciseNotes(session.id, exIndex, notes)}
-        />
-      ))}
+      {session.exercises.map((ex, exIndex) =>
+        !ex.name.trim() && ex.slotMuscle ? (
+          <SlotCard
+            key={ex.exerciseId + exIndex}
+            muscleId={ex.slotMuscle}
+            sets={ex.sets.length}
+            targetReps={ex.targetReps}
+            onPick={(name) => fillSessionSlot(session.id, exIndex, name)}
+          />
+        ) : (
+          <ExerciseCard
+            key={ex.exerciseId + exIndex}
+            ex={ex}
+            last={lastPerformance(allSessions, session.profileId, ex.name, session.id)}
+            unit={profile?.unit ?? 'lb'}
+            isPR={prs.has(prKey(session.id, exIndex))}
+            onSetChange={(setId, patch) => updateSet(session.id, exIndex, setId, patch)}
+            onAddSet={() => addSet(session.id, exIndex)}
+            onRemoveSet={(setId) => removeSet(session.id, exIndex, setId)}
+            onNotes={(notes) => setExerciseNotes(session.id, exIndex, notes)}
+          />
+        ),
+      )}
 
       {/* Add extra exercise */}
+      <ExerciseDatalist id="workout-lib-exercises" />
       <div className="card flex items-center gap-2 p-3">
         <input
           className="input"
+          list="workout-lib-exercises"
           placeholder="Add another exercise…"
           value={newExercise}
           onChange={(e) => setNewExercise(e.target.value)}
@@ -159,6 +174,40 @@ export function WorkoutPage() {
         <button className="btn-danger w-full" onClick={handleDelete}>
           Delete workout
         </button>
+      </div>
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+
+/** An unfilled muscle slot: choose the exercise now, based on what's free. */
+function SlotCard({
+  muscleId,
+  sets,
+  targetReps,
+  onPick,
+}: {
+  muscleId: MuscleId
+  sets: number
+  targetReps?: string
+  onPick: (name: string) => void
+}) {
+  return (
+    <div className="card border-dashed border-sky-500/40 p-4">
+      <div className="flex items-baseline justify-between gap-2">
+        <h3 className="text-lg font-bold">🎯 {muscleName(muscleId)}</h3>
+        <span className="text-xs text-slate-400">
+          {sets} set{sets === 1 ? '' : 's'}
+          {targetReps ? ` × ${targetReps}` : ''}
+        </span>
+      </div>
+      <p className="mt-1 text-xs text-slate-400">
+        Pick any {muscleName(muscleId).toLowerCase()} exercise — whatever equipment is free. Your
+        targets and history kick in once you choose.
+      </p>
+      <div className="mt-3">
+        <ExerciseSlotPicker muscleId={muscleId} value="" onPick={onPick} />
       </div>
     </div>
   )

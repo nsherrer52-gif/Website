@@ -231,7 +231,7 @@ export function SettingsPage() {
         </div>
       </section>
 
-      <p className="pb-2 text-center text-xs text-slate-600">Gym Tracker · v3.0 · data stored on this device</p>
+      <p className="pb-2 text-center text-xs text-slate-600">Gym Tracker · v4.0 · data stored on this device</p>
     </div>
   )
 }

@@ -78,7 +78,7 @@ export function seedData(): PersistedData {
     measurementFields: ['Waist', 'Chest', 'Arms', 'Thighs'],
     exerciseLibrary: {},
     muscleTargets: { ...DEFAULT_MUSCLE_TARGETS },
-    version: 3,
+    version: 4,
   }
 }
 

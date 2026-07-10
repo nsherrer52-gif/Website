@@ -2,7 +2,11 @@ import { useState } from 'react'
 import { useStore } from '../store/useStore'
 import { PageHeader, EmptyState } from '../components/ui'
 import { MuscleEditor } from '../components/MuscleEditor'
-import type { MuscleContribution, WorkoutDay } from '../types'
+import { ExerciseDatalist } from '../components/ExerciseDatalist'
+import { ExerciseSlotPicker } from '../components/ExerciseSlotPicker'
+import { MUSCLES, muscleName } from '../lib/muscles'
+import { TEMPLATES } from '../lib/templates'
+import type { Exercise, MuscleContribution, WorkoutDay } from '../types'
 
 export function ProgramPage() {
   const program = useStore((s) => s.program)
@@ -25,6 +29,8 @@ export function ProgramPage() {
         subtitle="Your rotating split. The app suggests the next day automatically."
       />
 
+      <ExerciseDatalist id="lib-exercises" />
+
       <div className="card p-4">
         <label className="label" htmlFor="program-name">
           Program name
@@ -36,6 +42,8 @@ export function ProgramPage() {
           onChange={(e) => setProgramName(e.target.value)}
         />
       </div>
+
+      <TemplatesCard />
 
       {program.days.length === 0 ? (
         <EmptyState icon="📋" title="No days yet">
@@ -67,11 +75,61 @@ export function ProgramPage() {
 
 // ---------------------------------------------------------------------------
 
+/** Start over from a preset program (classic named splits or slot-based). */
+function TemplatesCard() {
+  const setProgram = useStore((s) => s.setProgram)
+  const [open, setOpen] = useState(false)
+  const [sel, setSel] = useState(TEMPLATES[0].id)
+
+  const template = TEMPLATES.find((t) => t.id === sel)!
+
+  return (
+    <div className="card p-4">
+      <button
+        className="flex w-full items-center justify-between text-left font-semibold"
+        onClick={() => setOpen((v) => !v)}
+      >
+        <span>✨ Start from a template</span>
+        <span className="text-slate-400">{open ? '▾' : '▸'}</span>
+      </button>
+      {open && (
+        <div className="mt-3 space-y-2">
+          <select className="input" value={sel} onChange={(e) => setSel(e.target.value)}>
+            {TEMPLATES.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.name}
+              </option>
+            ))}
+          </select>
+          <p className="text-xs text-slate-400">{template.description}</p>
+          <button
+            className="btn-primary w-full"
+            onClick={() => {
+              if (
+                confirm(
+                  `Replace your current program with "${template.name}"? Your logged workout history is kept.`,
+                )
+              ) {
+                setProgram(template.build())
+                setOpen(false)
+              }
+            }}
+          >
+            Use this template
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
 function DayEditor({ day, index, total }: { day: WorkoutDay; index: number; total: number }) {
   const renameDay = useStore((s) => s.renameDay)
   const deleteDay = useStore((s) => s.deleteDay)
   const moveDay = useStore((s) => s.moveDay)
   const addExercise = useStore((s) => s.addExercise)
+  const addSlot = useStore((s) => s.addSlot)
+  const fillSlotExercise = useStore((s) => s.fillSlotExercise)
   const updateExercise = useStore((s) => s.updateExercise)
   const deleteExercise = useStore((s) => s.deleteExercise)
   const moveExercise = useStore((s) => s.moveExercise)
@@ -136,12 +194,29 @@ function DayEditor({ day, index, total }: { day: WorkoutDay; index: number; tota
 
           {day.exercises.map((ex, exIndex) => (
             <div key={ex.id} className="rounded-xl bg-slate-900/50 p-3">
+              {ex.slotMuscle && (
+                <div className="mb-1.5 flex items-center gap-2">
+                  <span className="shrink-0 rounded-full border border-sky-500/40 bg-sky-500/15 px-2 py-0.5 text-[11px] font-semibold text-sky-300">
+                    🎯 {muscleName(ex.slotMuscle)} slot
+                  </span>
+                  {!ex.name && <span className="text-xs text-slate-500">pick now or during the workout</span>}
+                </div>
+              )}
               <div className="flex items-center gap-2">
-                <input
-                  className="input flex-1"
-                  value={ex.name}
-                  onChange={(e) => updateExercise(day.id, ex.id, { name: e.target.value })}
-                />
+                {ex.slotMuscle ? (
+                  <ExerciseSlotPicker
+                    muscleId={ex.slotMuscle}
+                    value={ex.name}
+                    onPick={(name) => fillSlotExercise(day.id, ex.id, name)}
+                  />
+                ) : (
+                  <input
+                    className="input flex-1"
+                    list="lib-exercises"
+                    value={ex.name}
+                    onChange={(e) => updateExercise(day.id, ex.id, { name: e.target.value })}
+                  />
+                )}
                 <button
                   className="px-1.5 text-xs text-slate-500 disabled:opacity-30 hover:text-slate-200"
                   disabled={exIndex === 0}
@@ -198,6 +273,7 @@ function DayEditor({ day, index, total }: { day: WorkoutDay; index: number; tota
           <div className="flex items-center gap-2">
             <input
               className="input"
+              list="lib-exercises"
               placeholder="Add exercise…"
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
@@ -207,6 +283,21 @@ function DayEditor({ day, index, total }: { day: WorkoutDay; index: number; tota
               + Add
             </button>
           </div>
+
+          {/* Structure-first: commit to a muscle now, pick the exercise later */}
+          <select
+            className="input text-slate-400"
+            value=""
+            aria-label="Add muscle slot"
+            onChange={(e) => e.target.value && addSlot(day.id, e.target.value)}
+          >
+            <option value="">🎯 Add a muscle slot (choose exercise later)…</option>
+            {MUSCLES.map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.name}
+              </option>
+            ))}
+          </select>
         </div>
       )}
     </div>

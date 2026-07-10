@@ -26,6 +26,7 @@ export type MuscleContribution = Record<MuscleId, number>
 /** A single exercise as it appears in the program template. */
 export interface Exercise {
   id: ID
+  /** Empty string while this entry is an unfilled muscle slot. */
   name: string
   /** Planned number of working sets, e.g. 3. */
   targetSets: number
@@ -37,6 +38,12 @@ export interface Exercise {
    * name from the exercise library (see src/lib/exerciseLibrary.ts).
    */
   muscles?: MuscleContribution
+  /**
+   * When set, this entry began life as a muscle-focus SLOT (structure-first
+   * programming, RP-style): you commit to training this muscle for targetSets,
+   * and pick the specific exercise later — in the editor or mid-workout.
+   */
+  slotMuscle?: MuscleId
 }
 
 /** One workout in the rotation, e.g. "Day A — Push". */
@@ -106,6 +113,8 @@ export interface LoggedExercise {
   muscles?: MuscleContribution
   /** Next-session target computed from history at session start (v3+). */
   suggestion?: ExerciseSuggestion
+  /** Carried from a program slot; lets you pick the exercise mid-workout. */
+  slotMuscle?: MuscleId
 }
 
 /** A complete (or in-progress) workout for one profile on one date. */

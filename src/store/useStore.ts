@@ -56,11 +56,17 @@ interface Actions {
 
   // Program
   setProgramName: (name: string) => void
+  /** Replace the whole program (used by templates). Logged history is kept. */
+  setProgram: (program: Program) => void
   addDay: (name: string) => void
   renameDay: (dayId: ID, name: string) => void
   deleteDay: (dayId: ID) => void
   moveDay: (dayId: ID, dir: -1 | 1) => void
   addExercise: (dayId: ID, ex: Omit<Exercise, 'id'>) => void
+  /** Add a muscle-focus slot; the exercise gets picked later. */
+  addSlot: (dayId: ID, muscleId: MuscleId) => void
+  /** Choose the concrete exercise for a program slot. */
+  fillSlotExercise: (dayId: ID, exId: ID, name: string) => void
   updateExercise: (dayId: ID, exId: ID, patch: Partial<Exercise>) => void
   setExerciseMuscles: (dayId: ID, exId: ID, muscles: MuscleContribution) => void
   deleteExercise: (dayId: ID, exId: ID) => void
@@ -81,6 +87,8 @@ interface Actions {
   addSet: (sessionId: ID, exIndex: number) => void
   removeSet: (sessionId: ID, exIndex: number, setId: ID) => void
   addExerciseToSession: (sessionId: ID, name: string) => void
+  /** Choose the exercise for an unfilled slot in a live session. */
+  fillSessionSlot: (sessionId: ID, exIndex: number, name: string) => void
   setExerciseNotes: (sessionId: ID, exIndex: number, notes: string) => void
   setSessionNotes: (sessionId: ID, notes: string) => void
   setSessionDate: (sessionId: ID, date: string) => void
@@ -142,6 +150,8 @@ export const useStore = create<StoreState>()(
       setProgramName: (name) =>
         set((s) => ({ program: { ...s.program, name } })),
 
+      setProgram: (program) => set({ program }),
+
       addDay: (name) =>
         set((s) => {
           const day: WorkoutDay = { id: uid(), name: name.trim() || 'New day', exercises: [] }
@@ -183,6 +193,51 @@ export const useStore = create<StoreState>()(
               ...s.program,
               days: s.program.days.map((d) =>
                 d.id === dayId ? { ...d, exercises: [...d.exercises, newEx] } : d,
+              ),
+            },
+          }
+        }),
+
+      addSlot: (dayId, muscleId) =>
+        set((s) => {
+          // Credit the focus muscle in full until a specific exercise is chosen.
+          const slotEx: Exercise = {
+            id: uid(),
+            name: '',
+            targetSets: 3,
+            targetReps: '8-12',
+            slotMuscle: muscleId,
+            muscles: { [muscleId]: 1 },
+          }
+          return {
+            program: {
+              ...s.program,
+              days: s.program.days.map((d) =>
+                d.id === dayId ? { ...d, exercises: [...d.exercises, slotEx] } : d,
+              ),
+            },
+          }
+        }),
+
+      fillSlotExercise: (dayId, exId, name) =>
+        set((s) => {
+          const clean = name.trim()
+          if (!clean) return s
+          const resolved = resolveMuscles(clean, undefined, s.exerciseLibrary)
+          return {
+            program: {
+              ...s.program,
+              days: s.program.days.map((d) =>
+                d.id === dayId
+                  ? {
+                      ...d,
+                      exercises: d.exercises.map((e) =>
+                        e.id === exId
+                          ? { ...e, name: clean, ...(hasMuscles(resolved) ? { muscles: resolved } : {}) }
+                          : e,
+                      ),
+                    }
+                  : d,
               ),
             },
           }
@@ -260,20 +315,26 @@ export const useStore = create<StoreState>()(
           exercises: (day?.exercises ?? []).map((ex) => {
             // Prescribe this session's target from the last time this exercise
             // was performed (double progression), and pre-fill the weight.
-            const last = lastPerformance(s.sessions, s.activeProfileId, ex.name)
-            const suggestion = suggestForExercise(last?.exercise ?? null, unit, ex.targetReps)
+            // Unfilled muscle slots carry through so the exercise can be
+            // chosen mid-workout.
+            const named = ex.name.trim().length > 0
+            const last = named ? lastPerformance(s.sessions, s.activeProfileId, ex.name) : null
+            const suggestion = named
+              ? suggestForExercise(last?.exercise ?? null, unit, ex.targetReps)
+              : undefined
             return {
               exerciseId: ex.id,
               name: ex.name,
               targetReps: ex.targetReps,
               notes: undefined,
+              slotMuscle: ex.slotMuscle,
               // Snapshot the muscle map so weekly volume stays accurate later.
               muscles: resolveMuscles(ex.name, ex.muscles, s.exerciseLibrary),
               suggestion,
               sets: Array.from({ length: Math.max(1, ex.targetSets) }, () => ({
                 id: uid(),
                 reps: null,
-                weight: suggestion.weight,
+                weight: suggestion?.weight ?? null,
                 done: false,
               })),
             }
@@ -345,6 +406,43 @@ export const useStore = create<StoreState>()(
           ),
         })),
 
+      fillSessionSlot: (sessionId, exIndex, name) => {
+        const s = get()
+        const clean = name.trim()
+        const sess = s.sessions.find((x) => x.id === sessionId)
+        if (!clean || !sess) return
+        const profile = s.profiles.find((p) => p.id === sess.profileId)
+        const last = lastPerformance(s.sessions, sess.profileId, clean, sessionId)
+        const suggestion = suggestForExercise(
+          last?.exercise ?? null,
+          profile?.unit ?? 'lb',
+          sess.exercises[exIndex]?.targetReps,
+        )
+        const resolved = resolveMuscles(clean, undefined, s.exerciseLibrary)
+        set((st) => ({
+          sessions: st.sessions.map((x) =>
+            x.id !== sessionId
+              ? x
+              : {
+                  ...x,
+                  exercises: x.exercises.map((le, i) =>
+                    i !== exIndex
+                      ? le
+                      : {
+                          ...le,
+                          name: clean,
+                          muscles: hasMuscles(resolved) ? resolved : le.muscles,
+                          suggestion,
+                          sets: le.sets.map((se) =>
+                            se.weight == null && !se.done ? { ...se, weight: suggestion.weight } : se,
+                          ),
+                        },
+                  ),
+                },
+          ),
+        }))
+      },
+
       setExerciseNotes: (sessionId, exIndex, notes) =>
         set((s) => ({
           sessions: s.sessions.map((sess) => {
@@ -415,7 +513,7 @@ export const useStore = create<StoreState>()(
           // v1 backups won't have these — fall back to defaults.
           exerciseLibrary: data.exerciseLibrary ?? {},
           muscleTargets: data.muscleTargets ?? { ...DEFAULT_MUSCLE_TARGETS },
-          version: data.version ?? 3,
+          version: data.version ?? 4,
         })),
 
       resetAll: () => set(() => ({ ...seedData() })),
