@@ -10,7 +10,7 @@ export function ProfileSwitcher() {
     <div className="flex items-center gap-2">
       <span
         className="h-3 w-3 shrink-0 rounded-full"
-        style={{ backgroundColor: active?.color ?? '#38bdf8' }}
+        style={{ backgroundColor: active?.color ?? '#a3e635' }}
         aria-hidden
       />
       <select

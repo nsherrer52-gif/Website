@@ -7,7 +7,8 @@ import { muscleVolumeForSessions, roundVol, doneSetCount } from '../lib/volume'
 import { muscleName } from '../lib/muscles'
 import { formatLongDate } from '../lib/date'
 import { summarizeSets } from '../lib/history'
-import { EmptyState, Stat } from '../components/ui'
+import { EmptyState, Stat, PRBadge } from '../components/ui'
+import { IconCheckCircle } from '../components/icons'
 
 /** The post-workout victory lap: totals, PRs, muscles hit, and vs-last-time. */
 export function SummaryPage() {
@@ -70,8 +71,8 @@ export function SummaryPage() {
 
   return (
     <div className="space-y-5">
-      <div className="card border-emerald-500/40 p-5 text-center">
-        <div className="text-4xl">🎉</div>
+      <div className="card border-sky-500/40 p-5 text-center">
+        <IconCheckCircle className="mx-auto h-10 w-10 text-sky-500" />
         <h1 className="mt-1 text-2xl font-bold tracking-tight">Workout complete!</h1>
         <p className="mt-1 text-sm text-slate-400">
           {session.dayName} · {formatLongDate(session.date)}
@@ -91,12 +92,12 @@ export function SummaryPage() {
       <div className="grid grid-cols-3 gap-3">
         <Stat label="Sets done" value={setsDone} accent={profile?.color} />
         <Stat label="Volume" value={volume > 0 ? `${volume}` : '—'} />
-        <Stat label="PRs" value={prExercises.length > 0 ? `🏆 ${prExercises.length}` : '—'} />
+        <Stat label="PRs" value={prExercises.length > 0 ? prExercises.length : '—'} />
       </div>
 
       {prExercises.length > 0 && (
         <div className="card space-y-2 p-4">
-          <h2 className="font-semibold">🏆 New personal records</h2>
+          <h2 className="flex items-center gap-2 font-semibold">New personal records <PRBadge /></h2>
           {prExercises.map((e, i) => (
             <div key={e.exerciseId + i} className="text-sm">
               <span className="font-medium">{e.name}</span>
@@ -124,7 +125,7 @@ export function SummaryPage() {
 
       <div className="space-y-2">
         <button className="btn-primary w-full py-3" onClick={() => navigate('/progress')}>
-          View progress 📈
+          View progress
         </button>
         <button className="btn-ghost w-full" onClick={() => navigate('/')}>
           Done

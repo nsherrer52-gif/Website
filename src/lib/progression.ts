@@ -88,7 +88,7 @@ export function suggestForExercise(
     const targetRep = Math.min(range.high, worstReps + 1)
     return {
       weight: topWeight,
-      reps: `${targetRep}–${range.high}`,
+      reps: targetRep === range.high ? `${range.high}` : `${targetRep}–${range.high}`,
       note:
         topSets.length > 1
           ? `Last time at ${topWeight}: ${repsList} reps. Push every set toward ${range.high}.`

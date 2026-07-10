@@ -61,7 +61,7 @@ export const DEFAULT_PREFS = {
   barWeightKg: 20,
 }
 
-const ACCENTS = ['#38bdf8', '#f472b6', '#34d399', '#fbbf24', '#a78bfa', '#fb7185']
+const ACCENTS = ['#a3e635', '#22d3ee', '#e879f9', '#fbbf24', '#818cf8', '#fb7185']
 
 export function makeProfile(name: string, index = 0): Profile {
   return {

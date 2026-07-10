@@ -3,7 +3,7 @@ import type { MuscleId, MuscleTarget } from '../types'
 import { muscleName, volumeToColor } from '../lib/muscles'
 import { roundVol } from '../lib/volume'
 
-const NEUTRAL = '#1f2937'
+const NEUTRAL = '#20242b'
 
 /**
  * Stylized front + back body silhouettes with each muscle region colored by how
@@ -27,7 +27,7 @@ export function BodyMap({
         fill={volumeToColor(sets, targets[id])}
         onClick={() => onSelect?.(id)}
         style={{ cursor: onSelect ? 'pointer' : 'default' }}
-        stroke={selected === id ? '#e2e8f0' : 'transparent'}
+        stroke={selected === id ? '#eef0f4' : 'transparent'}
         strokeWidth={selected === id ? 1.6 : 0}
       >
         <title>
@@ -74,7 +74,7 @@ export function BodyMap({
         <ellipse cx="46" cy="122" rx="8.5" ry="23" />
         <ellipse cx="64" cy="122" rx="8.5" ry="23" />
       </Region>
-      <text x="55" y="197" textAnchor="middle" fontSize="9" fill="#64748b">
+      <text x="55" y="197" textAnchor="middle" fontSize="9" fill="#5a6472">
         Front
       </text>
 
@@ -115,7 +115,7 @@ export function BodyMap({
         <ellipse cx="158" cy="168" rx="6.5" ry="14" />
         <ellipse cx="172" cy="168" rx="6.5" ry="14" />
       </Region>
-      <text x="165" y="197" textAnchor="middle" fontSize="9" fill="#64748b">
+      <text x="165" y="197" textAnchor="middle" fontSize="9" fill="#5a6472">
         Back
       </text>
     </svg>

@@ -1,4 +1,38 @@
 @import 'tailwindcss';
+@import '@fontsource-variable/space-grotesk';
+
+/* ---------------------------------------------------------------------------
+   Design tokens.
+
+   The whole app is styled through two remapped scales:
+   - "slate"  → blue-free graphite neutrals (near-black instrument panel)
+   - "sky"    → lime accent (used sparingly: CTAs, active states, targets)
+   Semantic colors (emerald = done/success, amber = over/warn, rose = danger)
+   keep their Tailwind defaults.
+--------------------------------------------------------------------------- */
+@theme {
+  --font-display: 'Space Grotesk Variable', ui-sans-serif, system-ui, sans-serif;
+
+  /* Graphite neutrals */
+  --color-slate-950: #060709;
+  --color-slate-900: #0b0d10;
+  --color-slate-800: #14171c;
+  --color-slate-700: #242933;
+  --color-slate-600: #39404d;
+  --color-slate-500: #5a6472;
+  --color-slate-400: #8c95a3;
+  --color-slate-300: #c0c7d1;
+  --color-slate-200: #dde1e8;
+  --color-slate-100: #eef0f4;
+  --color-slate-50: #f7f8fa;
+
+  /* Lime accent */
+  --color-sky-600: #84cc16;
+  --color-sky-500: #a3e635;
+  --color-sky-400: #b5f04f;
+  --color-sky-300: #c9f57e;
+  --color-sky-200: #ddfaac;
+}
 
 html,
 body,
@@ -8,17 +42,26 @@ body,
 
 body {
   margin: 0;
-  color: #e2e8f0;
-  /* Subtle vertical gradient + a faint top glow for depth. */
-  background:
-    radial-gradient(120% 60% at 50% -10%, rgba(56, 189, 248, 0.08), transparent 60%),
-    linear-gradient(180deg, #0b1120 0%, #0f172a 40%, #0f172a 100%);
-  background-attachment: fixed;
+  color: #e7eaee;
+  background-color: #0b0d10;
   font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
   /* Respect the iPhone notch / home indicator. */
   padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Display face for structure: headings, stats, primary actions. */
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+}
+
+/* Data reads better when digits align. */
+input[type='number'],
+select {
+  font-variant-numeric: tabular-nums;
 }
 
 /* Stop number inputs from showing spin buttons; the big +/- look nicer. */
@@ -35,7 +78,7 @@ input[type='number'] {
 @keyframes fade-in {
   from {
     opacity: 0;
-    transform: translateY(4px);
+    transform: translateY(3px);
   }
   to {
     opacity: 1;
@@ -45,35 +88,41 @@ input[type='number'] {
 
 /* Reusable component classes built on Tailwind utilities. */
 @layer components {
+  /* Flat surface, hairline border, no glass or glow. */
   .card {
-    @apply rounded-2xl border border-slate-700/50 bg-gradient-to-b from-slate-800/80 to-slate-800/50
-           shadow-lg shadow-black/20 backdrop-blur-sm;
+    @apply rounded-xl border border-slate-700/70 bg-slate-800;
   }
   .btn,
   .btn-primary,
   .btn-ghost,
   .btn-danger {
-    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 font-semibold
-           transition active:scale-[0.97] disabled:opacity-40 disabled:active:scale-100;
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 font-semibold
+           transition active:scale-[0.98] disabled:opacity-40 disabled:active:scale-100;
   }
   .btn-primary {
-    @apply bg-sky-500 text-slate-950 shadow-md shadow-sky-500/20 hover:bg-sky-400;
+    @apply bg-sky-500 text-slate-950 hover:bg-sky-400;
+    font-family: var(--font-display);
+    letter-spacing: 0.02em;
   }
   .btn-ghost {
-    @apply border border-slate-700/60 bg-slate-700/50 text-slate-100 hover:bg-slate-700;
+    @apply border border-slate-700 bg-transparent text-slate-200 hover:bg-slate-700/40;
   }
   .btn-danger {
-    @apply bg-rose-500/90 text-white hover:bg-rose-500;
+    @apply border border-rose-500/40 bg-transparent text-rose-400 hover:bg-rose-500/10;
   }
   .input {
-    @apply w-full rounded-xl border border-slate-700 bg-slate-900/70 px-3 py-2.5 text-slate-100
+    @apply w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2.5 text-slate-100
            placeholder-slate-500 outline-none transition
-           focus:border-sky-500 focus:ring-1 focus:ring-sky-500;
+           focus:border-sky-500/70 focus:ring-1 focus:ring-sky-500/40;
   }
   .label {
-    @apply mb-1 block text-xs font-medium uppercase tracking-wide text-slate-400;
+    @apply mb-1 block text-[11px] font-medium uppercase tracking-[0.14em] text-slate-500;
+  }
+  /* Small uppercase tag, e.g. muscle slots and coach actions. */
+  .chip {
+    @apply inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.08em];
   }
   .page-enter {
-    animation: fade-in 0.22s ease-out;
+    animation: fade-in 0.18s ease-out;
   }
 }

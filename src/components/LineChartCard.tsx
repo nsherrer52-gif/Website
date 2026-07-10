@@ -29,7 +29,7 @@ interface Row {
 export function LineChartCard({
   title,
   unit,
-  color = '#38bdf8',
+  color = '#a3e635',
   data,
   projection,
   trendNote,
@@ -65,17 +65,17 @@ export function LineChartCard({
       <div className="h-56 w-full">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={rows} margin={{ top: 5, right: 8, left: -16, bottom: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />
-            <XAxis dataKey="label" stroke="#64748b" fontSize={11} tickMargin={8} />
-            <YAxis stroke="#64748b" fontSize={11} domain={['auto', 'auto']} width={44} />
+            <CartesianGrid strokeDasharray="3 3" stroke="#242933" vertical={false} />
+            <XAxis dataKey="label" stroke="#5a6472" fontSize={11} tickMargin={8} />
+            <YAxis stroke="#5a6472" fontSize={11} domain={['auto', 'auto']} width={44} />
             <Tooltip
               contentStyle={{
-                background: '#0f172a',
-                border: '1px solid #334155',
+                background: '#0b0d10',
+                border: '1px solid #242933',
                 borderRadius: 12,
                 color: '#e2e8f0',
               }}
-              labelStyle={{ color: '#94a3b8' }}
+              labelStyle={{ color: '#8c95a3' }}
             />
             <Line
               type="monotone"

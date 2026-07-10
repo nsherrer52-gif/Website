@@ -78,7 +78,7 @@ export function TodayPage() {
 
   return (
     <div className="space-y-5">
-      <PageHeader title={`Hi, ${profile?.name ?? ''} 👋`} subtitle="Ready to train?" />
+      <PageHeader title={`Hi, ${profile?.name ?? ''}`} subtitle="Ready to train?" />
 
       <div className="grid grid-cols-2 gap-3">
         <Stat label="This week" value={`${thisWeekCount} workout${thisWeekCount === 1 ? '' : 's'}`} accent={profile?.color} />
@@ -94,7 +94,7 @@ export function TodayPage() {
           </button>
         </div>
         {topMuscles.length === 0 ? (
-          <p className="text-sm text-slate-400">No sets logged yet this week. Time to train! 💪</p>
+          <p className="text-sm text-slate-400">No sets logged yet this week — time to train.</p>
         ) : (
           <>
             <p className="text-sm text-slate-400">
@@ -112,7 +112,7 @@ export function TodayPage() {
             </div>
           </>
         )}
-        {coachLine && <p className="border-t border-slate-700/60 pt-2 text-xs text-sky-300/90">📣 {coachLine}</p>}
+        {coachLine && <p className="border-t border-slate-700/60 pt-2 text-xs text-sky-300/90">{coachLine}</p>}
       </section>
 
       {/* Resume any unfinished workouts */}

@@ -5,7 +5,7 @@ import { lastPerformance, summarizeSets } from '../lib/history'
 import { formatLongDate } from '../lib/date'
 import { computePRSet, prKey } from '../lib/pr'
 import { muscleName } from '../lib/muscles'
-import { EmptyState } from '../components/ui'
+import { EmptyState, PRBadge } from '../components/ui'
 import { Stepper } from '../components/Stepper'
 import { ExerciseDatalist } from '../components/ExerciseDatalist'
 import { ExerciseSlotPicker } from '../components/ExerciseSlotPicker'
@@ -97,7 +97,7 @@ export function WorkoutPage() {
           <h1 className="text-2xl font-bold tracking-tight">{session.dayName}</h1>
           <span
             className="rounded-full px-2.5 py-1 text-xs font-semibold"
-            style={{ backgroundColor: (profile?.color ?? '#38bdf8') + '22', color: profile?.color }}
+            style={{ backgroundColor: (profile?.color ?? '#a3e635') + '22', color: profile?.color }}
           >
             {profile?.name}
           </span>
@@ -195,7 +195,7 @@ export function WorkoutPage() {
           </div>
         ) : (
           <button className="btn-primary w-full py-3 text-base" onClick={handleFinish}>
-            Finish workout ✓
+            Finish workout
           </button>
         )}
         <button className="btn-danger w-full" onClick={handleDelete}>
@@ -266,7 +266,7 @@ function SlotCard({
   return (
     <div className="card border-dashed border-sky-500/40 p-4">
       <div className="flex items-baseline justify-between gap-2">
-        <h3 className="text-lg font-bold">🎯 {muscleName(muscleId)}</h3>
+        <span className="chip border border-sky-500/40 bg-sky-500/10 text-sky-400">{muscleName(muscleId)}</span>
         <span className="text-xs text-slate-400">
           {sets} set{sets === 1 ? '' : 's'}
           {targetReps ? ` × ${targetReps}` : ''}
@@ -330,7 +330,7 @@ function ExerciseCard({
       <div className="flex items-baseline justify-between gap-2">
         <h3 className="flex items-center gap-1.5 text-lg font-bold">
           {ex.name}
-          {isPR && <span title="New personal record">🏆</span>}
+          {isPR && <PRBadge />}
         </h3>
         {ex.targetReps && <span className="text-xs text-slate-400">target {ex.targetReps} reps</span>}
       </div>
@@ -341,7 +341,7 @@ function ExerciseCard({
       {suggestion && suggestion.action !== 'baseline' && (
         <div className="mt-2 rounded-lg border border-sky-500/30 bg-sky-500/10 px-3 py-2 text-xs">
           <span className="font-semibold text-sky-300">
-            🎯 Target: {suggestion.weight != null ? `${suggestion.weight} ${unit} × ` : ''}
+            Target: {suggestion.weight != null ? `${suggestion.weight} ${unit} × ` : ''}
             {suggestion.reps} reps
           </span>
           <span className="ml-1 text-slate-400">— {suggestion.note}</span>
@@ -349,7 +349,7 @@ function ExerciseCard({
       )}
       {suggestion && suggestion.action === 'baseline' && (
         <div className="mt-2 rounded-lg border border-slate-600/50 bg-slate-700/20 px-3 py-2 text-xs text-slate-400">
-          🎯 {suggestion.note}
+          {suggestion.note}
         </div>
       )}
 
@@ -433,7 +433,7 @@ function ExerciseCard({
           title="Plate calculator"
           onClick={() => setShowPlates((v) => !v)}
         >
-          🏋️
+          Plates
         </button>
         <button
           className={`btn-ghost py-2 text-sm ${showRIR ? 'text-sky-300' : ''}`}

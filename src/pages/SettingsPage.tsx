@@ -196,10 +196,10 @@ export function SettingsPage() {
           </p>
           <div className="flex flex-col gap-2 sm:flex-row">
             <button className="btn-primary flex-1" onClick={handleExport}>
-              ⬇️ Export backup
+              Export backup
             </button>
             <button className="btn-ghost flex-1" onClick={() => fileRef.current?.click()}>
-              ⬆️ Import backup
+              Import backup
             </button>
             <input
               ref={fileRef}
@@ -278,7 +278,7 @@ function PrefsSection() {
           </select>
         </div>
         <div>
-          <span className="label">Barbell weight (for the 🏋️ plate calculator)</span>
+          <span className="label">Barbell weight (plate calculator)</span>
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="mb-1 block text-xs text-slate-500" htmlFor="bar-lb">

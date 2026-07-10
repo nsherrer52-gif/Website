@@ -89,7 +89,7 @@ function TemplatesCard() {
         className="flex w-full items-center justify-between text-left font-semibold"
         onClick={() => setOpen((v) => !v)}
       >
-        <span>✨ Start from a template</span>
+        <span>Start from a template</span>
         <span className="text-slate-400">{open ? '▾' : '▸'}</span>
       </button>
       {open && (
@@ -181,7 +181,7 @@ function DayEditor({ day, index, total }: { day: WorkoutDay; index: number; tota
             onClick={() => confirm(`Delete "${day.name}"?`) && deleteDay(day.id)}
             aria-label="Delete day"
           >
-            🗑
+            ✕
           </button>
         </div>
       </div>
@@ -196,8 +196,8 @@ function DayEditor({ day, index, total }: { day: WorkoutDay; index: number; tota
             <div key={ex.id} className="rounded-xl bg-slate-900/50 p-3">
               {ex.slotMuscle && (
                 <div className="mb-1.5 flex items-center gap-2">
-                  <span className="shrink-0 rounded-full border border-sky-500/40 bg-sky-500/15 px-2 py-0.5 text-[11px] font-semibold text-sky-300">
-                    🎯 {muscleName(ex.slotMuscle)} slot
+                  <span className="chip border border-sky-500/40 bg-sky-500/10 text-sky-400">
+                    {muscleName(ex.slotMuscle)} slot
                   </span>
                   {!ex.name && <span className="text-xs text-slate-500">pick now or during the workout</span>}
                 </div>
@@ -291,7 +291,7 @@ function DayEditor({ day, index, total }: { day: WorkoutDay; index: number; tota
             aria-label="Add muscle slot"
             onChange={(e) => e.target.value && addSlot(day.id, e.target.value)}
           >
-            <option value="">🎯 Add a muscle slot (choose exercise later)…</option>
+            <option value="">+ Add a muscle slot (choose exercise later)…</option>
             {MUSCLES.map((m) => (
               <option key={m.id} value={m.id}>
                 {m.name}
@@ -330,7 +330,7 @@ function ExerciseMuscles({
         className="text-xs font-medium text-slate-400 hover:text-slate-200"
         onClick={() => setOpen((v) => !v)}
       >
-        {open ? '▾' : '▸'} 🎯 Muscles{count > 0 ? ` (${count})` : ' — not set'}
+        {open ? '▾' : '▸'} Muscles{count > 0 ? ` (${count})` : ' — not set'}
       </button>
       {open && (
         <div className="mt-2">

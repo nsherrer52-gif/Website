@@ -6,7 +6,7 @@ import { bestEstimated1RM, topSetWeight, totalVolume, sessionVolume, round1 } fr
 import { formatShort, formatDate } from '../lib/date'
 import { computePRSet, prKey } from '../lib/pr'
 import { projectTrend, type DatedPoint } from '../lib/progression'
-import { PageHeader, EmptyState, Stat } from '../components/ui'
+import { PageHeader, EmptyState, Stat, PRBadge } from '../components/ui'
 import { LineChartCard, type ChartPoint } from '../components/LineChartCard'
 import { MusclesTab } from './MusclesTab'
 
@@ -98,11 +98,12 @@ function ChartsTab() {
     let note: string | undefined
     if (trend) {
       proj = trend.points.map((p) => ({ label: formatShort(p.date), value: p.value }))
-      const eta = trend.points[trend.points.length - 1].value
+      const eta = Math.round(trend.points[trend.points.length - 1].value)
+      const slope = Math.round(trend.slopePerWeek * 10) / 10
       if (trend.slopePerWeek > 0.05) {
-        note = `Trending +${trend.slopePerWeek}/week — on pace for ~${eta} in 4 weeks (dashed line).`
+        note = `Trending +${slope}/week — on pace for ~${eta} in 4 weeks (dashed line).`
       } else if (trend.slopePerWeek < -0.05) {
-        note = `Trending ${trend.slopePerWeek}/week — consider a deload or a form/recovery check.`
+        note = `Trending ${slope}/week — consider a deload or a form/recovery check.`
       } else {
         note = 'Holding steady — to keep progressing, follow the in-workout targets or add a set.'
       }
@@ -214,7 +215,7 @@ function HistoryTab() {
               <div>
                 <div className="flex items-center gap-1.5 font-semibold">
                   {s.dayName}
-                  {sessionHasPR && <span title="New personal record">🏆</span>}
+                  {sessionHasPR && <PRBadge />}
                 </div>
                 <div className="text-xs text-slate-400">
                   {formatDate(s.date)}
@@ -233,14 +234,14 @@ function HistoryTab() {
                   <div key={ex.exerciseId + i} className="text-sm">
                     <div className="flex items-center gap-1.5 font-medium">
                       {ex.name}
-                      {prs.has(prKey(s.id, i)) && <span title="New personal record">🏆</span>}
+                      {prs.has(prKey(s.id, i)) && <PRBadge />}
                     </div>
                     <div className="text-slate-400">{summarizeSets(ex)}</div>
                   </div>
                 ))}
                 {s.notes && (
                   <div className="rounded-lg bg-slate-900/60 p-2 text-sm text-slate-300">
-                    📝 {s.notes}
+                    {s.notes}
                   </div>
                 )}
                 <div className="flex gap-2 pt-1">

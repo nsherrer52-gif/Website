@@ -1,12 +1,13 @@
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { ProfileSwitcher } from './ProfileSwitcher'
+import { IconChart, IconClipboard, IconDumbbell, IconHome, IconScale, IconSliders } from './icons'
 
 const TABS = [
-  { to: '/', label: 'Today', icon: '🏋️', end: true },
-  { to: '/program', label: 'Program', icon: '📋' },
-  { to: '/progress', label: 'Progress', icon: '📈' },
-  { to: '/body', label: 'Body', icon: '⚖️' },
-  { to: '/settings', label: 'Settings', icon: '⚙️' },
+  { to: '/', label: 'Today', Icon: IconHome, end: true },
+  { to: '/program', label: 'Program', Icon: IconClipboard },
+  { to: '/progress', label: 'Progress', Icon: IconChart },
+  { to: '/body', label: 'Body', Icon: IconScale },
+  { to: '/settings', label: 'Settings', Icon: IconSliders },
 ]
 
 export function Layout() {
@@ -17,10 +18,12 @@ export function Layout() {
   return (
     <div className="mx-auto flex min-h-full max-w-2xl flex-col">
       {/* Top bar */}
-      <header className="sticky top-0 z-10 flex items-center justify-between gap-3 border-b border-slate-800/80 bg-slate-900/70 px-4 py-3 backdrop-blur-md">
-        <div className="flex items-center gap-2 font-bold tracking-tight">
-          <span className="text-xl">🏋️</span>
-          <span className="bg-gradient-to-r from-sky-300 to-sky-500 bg-clip-text text-transparent">
+      <header className="sticky top-0 z-10 flex items-center justify-between gap-3 border-b border-slate-700/60 bg-slate-900/90 px-4 py-3 backdrop-blur-md">
+        <div className="flex items-center gap-2">
+          <span className="flex h-7 w-7 items-center justify-center rounded-md bg-sky-500 text-slate-950">
+            <IconDumbbell className="h-4.5 w-4.5" />
+          </span>
+          <span className="font-[family-name:var(--font-display)] text-[15px] font-bold tracking-tight">
             Gym Tracker
           </span>
         </div>
@@ -35,26 +38,24 @@ export function Layout() {
       </main>
 
       {/* Bottom navigation (mobile-first) */}
-      <nav className="fixed inset-x-0 bottom-0 z-10 border-t border-slate-800/80 bg-slate-900/85 backdrop-blur-md">
+      <nav className="fixed inset-x-0 bottom-0 z-10 border-t border-slate-700/60 bg-slate-900/95 backdrop-blur-md">
         <div
           className="mx-auto grid max-w-2xl grid-cols-5 px-1 pt-1"
           style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
         >
-          {TABS.map((tab) => (
+          {TABS.map(({ to, label, Icon, end }) => (
             <NavLink
-              key={tab.to}
-              to={tab.to}
-              end={tab.end}
+              key={to}
+              to={to}
+              end={end}
               className={({ isActive }) =>
-                `mx-auto flex w-full flex-col items-center gap-0.5 rounded-xl py-2 text-[11px] font-medium transition ${
-                  isActive
-                    ? 'bg-sky-500/10 text-sky-400'
-                    : 'text-slate-400 hover:text-slate-200'
+                `mx-auto flex w-full flex-col items-center gap-1 rounded-lg py-2 text-[10px] font-semibold uppercase tracking-[0.08em] transition ${
+                  isActive ? 'text-sky-500' : 'text-slate-500 hover:text-slate-300'
                 }`
               }
             >
-              <span className="text-lg leading-none">{tab.icon}</span>
-              {tab.label}
+              <Icon className="h-5 w-5" />
+              {label}
             </NavLink>
           ))}
         </div>

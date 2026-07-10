@@ -85,18 +85,18 @@ export function volumeStatus(sets: number, target: MuscleTarget | undefined): Vo
   return 'over'
 }
 
-const EMPTY = '#283449'
-const UNDER_LO = '#1e3a5f'
-const UNDER_HI = '#38bdf8' // sky
-const IN = '#34d399' // emerald
-const OVER = '#fbbf24' // amber
-const WAY_OVER = '#fb7185' // rose
+const EMPTY = '#242933'
+const UNDER_LO = '#2c3a1a' // dark olive, ramps toward the accent
+const UNDER_HI = '#84cc16' // lime-600
+const IN = '#a3e635' // lime accent
+const OVER = '#f59e0b' // amber
+const WAY_OVER = '#f43f5e' // rose
 
 /** Solid status color, used for bars and legends. */
 export function statusColor(status: VolumeStatus): string {
   switch (status) {
     case 'none':
-      return EMPTY
+      return '#39404d'
     case 'under':
       return UNDER_HI
     case 'in':
@@ -107,8 +107,8 @@ export function statusColor(status: VolumeStatus): string {
 }
 
 /**
- * Heat color for the body map: ramps from dim → sky while under target,
- * green when in range, amber/rose when over. `target` falls back to BIG.
+ * Heat color for the body map: ramps from dim olive → lime while under target,
+ * solid lime when in range, amber/rose when over. `target` falls back to BIG.
  */
 export function volumeToColor(sets: number, target: MuscleTarget | undefined): string {
   const t = target ?? BIG

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { IconTimer } from './icons'
 
 /**
  * Floating rest countdown pill, shown above the bottom nav during a workout.
@@ -47,11 +48,9 @@ export function RestTimer({
             : 'border-sky-500/50 bg-slate-900/90 text-slate-100'
         }`}
       >
-        <span className="text-lg" aria-hidden>
-          ⏱
-        </span>
+        <IconTimer className="h-[18px] w-[18px] text-sky-400" />
         {done ? (
-          <span className="font-bold">Rest over — go! 💪</span>
+          <span className="font-bold">Rest over — go!</span>
         ) : (
           <span className="min-w-12 text-center font-mono text-lg font-bold tabular-nums">
             {mins}:{String(secs).padStart(2, '0')}

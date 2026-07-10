@@ -125,7 +125,7 @@ function CoachCard({ recommendations }: { recommendations: MuscleRecommendation[
   if (active.length === 0) {
     return (
       <div className="card p-4">
-        <h3 className="font-semibold">📣 Coach</h3>
+        <h3 className="font-semibold">Coach</h3>
         <p className="mt-1 text-sm text-slate-400">
           Log a full week of training and the coach will start prescribing weekly sets per muscle
           to keep you progressing.
@@ -147,7 +147,7 @@ function CoachCard({ recommendations }: { recommendations: MuscleRecommendation[
   return (
     <div className="card space-y-2.5 p-4">
       <div className="flex items-baseline justify-between">
-        <h3 className="font-semibold">📣 Coach — this week</h3>
+        <h3 className="font-semibold">Coach · this week</h3>
         <span className="text-xs text-slate-500">based on last week</span>
       </div>
       {sorted.map((r) => (
