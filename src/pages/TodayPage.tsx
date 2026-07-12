@@ -7,6 +7,7 @@ import { currentWeekKey, currentWeekVolume, doneSetCount, isoWeekKey, roundVol }
 import { DEFAULT_MUSCLE_TARGETS, muscleName } from '../lib/muscles'
 import { weeklyRecommendations } from '../lib/coach'
 import { PageHeader, EmptyState, Stat } from '../components/ui'
+import { Buddy } from '../components/Buddy'
 import { MuscleVolumeBar } from '../components/MuscleVolumeBar'
 
 export function TodayPage() {
@@ -143,7 +144,9 @@ export function TodayPage() {
       ) : (
         <section className="space-y-3">
           {suggestedDay && (
-            <div className="card border-sky-500/40 p-4">
+            <div className="relative">
+              <Buddy pose="peek" className="absolute -top-[25px] right-7 h-[27px] w-14" />
+              <div className="card relative border-sky-500/40 p-4">
               <div className="text-xs font-semibold uppercase tracking-wide text-sky-400">Up next</div>
               <div className="mt-1 text-xl font-bold">{suggestedDay.name}</div>
               <div className="mt-0.5 text-sm text-slate-400">
@@ -152,6 +155,7 @@ export function TodayPage() {
               <button className="btn-primary mt-3 w-full" onClick={() => start(suggestedDay.id)}>
                 Start {suggestedDay.name}
               </button>
+              </div>
             </div>
           )}
 

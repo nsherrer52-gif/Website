@@ -154,6 +154,7 @@ export function WorkoutPage() {
             isPR={prs.has(prKey(session.id, exIndex))}
             onSetChange={(setId, patch) => handleSetChange(exIndex, setId, patch)}
             onWeightChange={(setId, weight) => updateSetWeight(session.id, exIndex, setId, weight)}
+            onSwap={(name) => fillSessionSlot(session.id, exIndex, name)}
             onAddSet={() => addSet(session.id, exIndex)}
             onRemoveSet={(setId) => removeSet(session.id, exIndex, setId)}
             onNotes={(notes) => setExerciseNotes(session.id, exIndex, notes)}
@@ -306,6 +307,7 @@ function ExerciseCard({
   isPR,
   onSetChange,
   onWeightChange,
+  onSwap,
   onAddSet,
   onRemoveSet,
   onNotes,
@@ -321,6 +323,8 @@ function ExerciseCard({
   ) => void
   /** Weight edits go through the cascading store action. */
   onWeightChange: (setId: string, weight: number | null) => void
+  /** Replace this exercise with a same-muscle alternative (machine taken). */
+  onSwap: (name: string) => void
   onAddSet: () => void
   onRemoveSet: (setId: string) => void
   onNotes: (notes: string) => void
@@ -328,7 +332,11 @@ function ExerciseCard({
   const [showNotes, setShowNotes] = useState(!!ex.notes)
   const [showRIR, setShowRIR] = useState(() => ex.sets.some((s) => s.rir != null))
   const [showPlates, setShowPlates] = useState(false)
+  const [showSwap, setShowSwap] = useState(false)
   const weightStep = unit === 'kg' ? 2.5 : 5
+
+  // The exercise's main mover, used to offer same-muscle swaps.
+  const primaryMuscle = Object.entries(ex.muscles ?? {}).sort((a, b) => b[1] - a[1])[0]?.[0]
 
   const grid = showRIR
     ? 'grid grid-cols-[1.5rem_1fr_1fr_2.75rem_2.25rem_1.25rem] items-center gap-1.5'
@@ -449,7 +457,7 @@ function ExerciseCard({
         ))}
       </div>
 
-      <div className="mt-3 flex items-center gap-2">
+      <div className="mt-3 flex flex-wrap items-center gap-2">
         <button className="btn-ghost flex-1 py-2 text-sm" onClick={onAddSet}>
           + Add set
         </button>
@@ -473,7 +481,32 @@ function ExerciseCard({
         >
           {showNotes ? 'Hide note' : 'Note'}
         </button>
+        {primaryMuscle && (
+          <button
+            className={`btn-ghost py-2 text-sm ${showSwap ? 'text-sky-300' : ''}`}
+            title="Swap for a same-muscle exercise"
+            onClick={() => setShowSwap((v) => !v)}
+          >
+            Swap
+          </button>
+        )}
       </div>
+
+      {showSwap && primaryMuscle && (
+        <div className="mt-2">
+          <p className="mb-1.5 text-xs text-slate-500">
+            Machine taken? Pick a replacement — your targets recompute for it.
+          </p>
+          <ExerciseSlotPicker
+            muscleId={primaryMuscle}
+            value=""
+            onPick={(name) => {
+              setShowSwap(false)
+              onSwap(name)
+            }}
+          />
+        </div>
+      )}
 
       {showPlates && <PlatePanel ex={ex} unit={unit as WeightUnit} barWeight={barWeight} />}
 

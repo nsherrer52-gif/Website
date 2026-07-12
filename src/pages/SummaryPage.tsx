@@ -8,7 +8,7 @@ import { muscleName } from '../lib/muscles'
 import { formatLongDate } from '../lib/date'
 import { summarizeSets } from '../lib/history'
 import { EmptyState, Stat, PRBadge } from '../components/ui'
-import { IconCheckCircle } from '../components/icons'
+import { Buddy } from '../components/Buddy'
 
 /** The post-workout victory lap: totals, PRs, muscles hit, and vs-last-time. */
 export function SummaryPage() {
@@ -72,7 +72,7 @@ export function SummaryPage() {
   return (
     <div className="space-y-5">
       <div className="card border-sky-500/40 p-5 text-center">
-        <IconCheckCircle className="mx-auto h-10 w-10 text-sky-500" />
+        <Buddy pose="cheer" className="mx-auto h-16 w-16" />
         <h1 className="mt-1 text-2xl font-bold tracking-tight">Workout complete!</h1>
         <p className="mt-1 text-sm text-slate-400">
           {session.dayName} · {formatLongDate(session.date)}

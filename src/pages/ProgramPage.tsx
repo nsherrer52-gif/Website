@@ -126,6 +126,7 @@ function TemplatesCard() {
 function DayEditor({ day, index, total }: { day: WorkoutDay; index: number; total: number }) {
   const renameDay = useStore((s) => s.renameDay)
   const deleteDay = useStore((s) => s.deleteDay)
+  const duplicateDay = useStore((s) => s.duplicateDay)
   const moveDay = useStore((s) => s.moveDay)
   const addExercise = useStore((s) => s.addExercise)
   const addSlot = useStore((s) => s.addSlot)
@@ -175,6 +176,14 @@ function DayEditor({ day, index, total }: { day: WorkoutDay; index: number; tota
             aria-label="Move day down"
           >
             ↓
+          </button>
+          <button
+            className="btn-ghost px-2 py-1.5 text-xs"
+            title="Duplicate day"
+            onClick={() => duplicateDay(day.id)}
+            aria-label="Duplicate day"
+          >
+            ⧉
           </button>
           <button
             className="btn-ghost px-2 py-1.5 text-xs hover:text-rose-400"

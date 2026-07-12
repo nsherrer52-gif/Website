@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { IconTimer } from './icons'
+import { Buddy } from './Buddy'
 import { beep } from '../lib/beep'
 
 /** Best-effort system notification when the app isn't visible. */
@@ -76,7 +77,11 @@ export function RestTimer({
             : 'border-sky-500/50 bg-slate-900/90 text-slate-100'
         }`}
       >
-        <IconTimer className="h-[18px] w-[18px] text-sky-400" />
+        {done ? (
+          <Buddy pose="cheer" className="h-6 w-6" />
+        ) : (
+          <IconTimer className="h-[18px] w-[18px] text-sky-400" />
+        )}
         {done ? (
           <span className="font-bold">Rest over — go!</span>
         ) : (

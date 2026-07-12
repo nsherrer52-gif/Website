@@ -195,6 +195,12 @@ export interface PersistedData {
   exerciseLibrary: Record<string, MuscleContribution>
   /** Editable weekly volume goals per muscle. */
   muscleTargets: Record<MuscleId, MuscleTarget>
+  /**
+   * Display names of user-created (non-built-in) exercises, keyed by
+   * normalized name. Captured automatically wherever a custom name is used,
+   * so custom exercises are reusable on any day via autocomplete/pickers.
+   */
+  customExercises: Record<string, string>
   /** Rest timer + plate calculator preferences. */
   prefs: Prefs
   /** Schema version, so we can migrate old backups if the model changes. */

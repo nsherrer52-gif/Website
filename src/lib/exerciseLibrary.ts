@@ -114,6 +114,7 @@ function titleCase(normalized: string): string {
 export function exercisesForMuscle(
   muscleId: string,
   libraryOverrides?: Record<string, MuscleContribution>,
+  displayNames?: Record<string, string>,
 ): { name: string; value: number }[] {
   const out = new Map<string, { name: string; value: number }>()
   for (const ex of LIBRARY_EXERCISES) {
@@ -122,10 +123,16 @@ export function exercisesForMuscle(
   }
   for (const [key, muscles] of Object.entries(libraryOverrides ?? {})) {
     const v = muscles[muscleId] ?? 0
-    if (v >= 0.5) out.set(key, { name: out.get(key)?.name ?? titleCase(key), value: v })
-    else out.delete(key) // an override that dropped this muscle wins over the default
+    if (v >= 0.5) {
+      out.set(key, { name: out.get(key)?.name ?? displayNames?.[key] ?? titleCase(key), value: v })
+    } else out.delete(key) // an override that dropped this muscle wins over the default
   }
   return [...out.values()].sort((a, b) => b.value - a.value || a.name.localeCompare(b.name))
+}
+
+/** True when a name matches one of the built-in library exercises. */
+export function isBuiltIn(name: string): boolean {
+  return normalizeName(name) in DEFAULT_LIBRARY
 }
 
 /** True if a contribution map has at least one muscle with a non-zero value. */

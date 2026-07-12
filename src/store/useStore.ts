@@ -19,7 +19,7 @@ import type {
 import { uid } from '../lib/id'
 import { todayISO } from '../lib/date'
 import { DEFAULT_PREFS, makeProfile, seedData } from '../lib/seed'
-import { hasMuscles, normalizeName, resolveMuscles } from '../lib/exerciseLibrary'
+import { hasMuscles, isBuiltIn, normalizeName, resolveMuscles } from '../lib/exerciseLibrary'
 import { applyWeightCascade } from '../lib/cascade'
 import { DEFAULT_MUSCLE_TARGETS } from '../lib/muscles'
 import { lastPerformance } from '../lib/history'
@@ -33,6 +33,15 @@ const STORAGE_KEY = 'gym-tracker-v1'
 
 function replaceById<T extends { id: ID }>(arr: T[], id: ID, patch: Partial<T>): T[] {
   return arr.map((item) => (item.id === id ? { ...item, ...patch } : item))
+}
+
+/** Record a non-built-in exercise name so it's reusable everywhere. */
+function withCustomName(current: Record<string, string>, name: string): Record<string, string> {
+  const clean = name.trim()
+  if (!clean || isBuiltIn(clean)) return current
+  const key = normalizeName(clean)
+  if (current[key] === clean) return current
+  return { ...current, [key]: clean }
 }
 
 function move<T>(arr: T[], index: number, dir: -1 | 1): T[] {
@@ -63,6 +72,8 @@ interface Actions {
   addDay: (name: string) => void
   renameDay: (dayId: ID, name: string) => void
   deleteDay: (dayId: ID) => void
+  /** Insert a deep copy of a day (new ids) right after the original. */
+  duplicateDay: (dayId: ID) => void
   moveDay: (dayId: ID, dir: -1 | 1) => void
   addExercise: (dayId: ID, ex: Omit<Exercise, 'id'>) => void
   /** Add a muscle-focus slot; the exercise gets picked later. */
@@ -76,6 +87,8 @@ interface Actions {
 
   // Muscle library & targets
   setLibraryMuscles: (name: string, muscles: MuscleContribution) => void
+  /** Forget a custom exercise (its name and any saved muscle map). */
+  removeCustomExercise: (name: string) => void
   setMuscleTarget: (id: MuscleId, target: MuscleTarget) => void
   setPrefs: (patch: Partial<Prefs>) => void
 
@@ -176,6 +189,21 @@ export const useStore = create<StoreState>()(
           program: { ...s.program, days: s.program.days.filter((d) => d.id !== dayId) },
         })),
 
+      duplicateDay: (dayId) =>
+        set((s) => {
+          const idx = s.program.days.findIndex((d) => d.id === dayId)
+          if (idx === -1) return s
+          const src = s.program.days[idx]
+          const copy: WorkoutDay = {
+            id: uid(),
+            name: `${src.name} (copy)`,
+            exercises: src.exercises.map((e) => ({ ...e, id: uid() })),
+          }
+          const days = [...s.program.days]
+          days.splice(idx + 1, 0, copy)
+          return { program: { ...s.program, days } }
+        }),
+
       moveDay: (dayId, dir) =>
         set((s) => {
           const idx = s.program.days.findIndex((d) => d.id === dayId)
@@ -194,6 +222,7 @@ export const useStore = create<StoreState>()(
             ...(hasMuscles(muscles) ? { muscles } : {}),
           }
           return {
+            customExercises: withCustomName(s.customExercises, ex.name),
             program: {
               ...s.program,
               days: s.program.days.map((d) =>
@@ -230,6 +259,7 @@ export const useStore = create<StoreState>()(
           if (!clean) return s
           const resolved = resolveMuscles(clean, undefined, s.exerciseLibrary)
           return {
+            customExercises: withCustomName(s.customExercises, clean),
             program: {
               ...s.program,
               days: s.program.days.map((d) =>
@@ -259,14 +289,33 @@ export const useStore = create<StoreState>()(
         })),
 
       setExerciseMuscles: (dayId, exId, muscles) =>
-        set((s) => ({
-          program: {
-            ...s.program,
-            days: s.program.days.map((d) =>
-              d.id === dayId ? { ...d, exercises: replaceById(d.exercises, exId, { muscles }) } : d,
-            ),
-          },
-        })),
+        set((s) => {
+          // For custom (non-built-in) exercises the muscle map syncs to the
+          // library automatically so it follows the exercise onto other days.
+          const name =
+            s.program.days.find((d) => d.id === dayId)?.exercises.find((e) => e.id === exId)
+              ?.name ?? ''
+          const clean = name.trim()
+          let exerciseLibrary = s.exerciseLibrary
+          let customExercises = s.customExercises
+          if (clean && !isBuiltIn(clean)) {
+            const key = normalizeName(clean)
+            exerciseLibrary = { ...exerciseLibrary }
+            if (hasMuscles(muscles)) exerciseLibrary[key] = muscles
+            else delete exerciseLibrary[key]
+            customExercises = withCustomName(customExercises, clean)
+          }
+          return {
+            exerciseLibrary,
+            customExercises,
+            program: {
+              ...s.program,
+              days: s.program.days.map((d) =>
+                d.id === dayId ? { ...d, exercises: replaceById(d.exercises, exId, { muscles }) } : d,
+              ),
+            },
+          }
+        }),
 
       deleteExercise: (dayId, exId) =>
         set((s) => ({
@@ -297,7 +346,17 @@ export const useStore = create<StoreState>()(
           const exerciseLibrary = { ...s.exerciseLibrary }
           if (hasMuscles(muscles)) exerciseLibrary[key] = muscles
           else delete exerciseLibrary[key]
-          return { exerciseLibrary }
+          return { exerciseLibrary, customExercises: withCustomName(s.customExercises, name) }
+        }),
+
+      removeCustomExercise: (name) =>
+        set((s) => {
+          const key = normalizeName(name)
+          const customExercises = { ...s.customExercises }
+          const exerciseLibrary = { ...s.exerciseLibrary }
+          delete customExercises[key]
+          delete exerciseLibrary[key]
+          return { customExercises, exerciseLibrary }
         }),
 
       setMuscleTarget: (id, target) =>
@@ -407,6 +466,7 @@ export const useStore = create<StoreState>()(
 
       addExerciseToSession: (sessionId, name) =>
         set((s) => ({
+          customExercises: withCustomName(s.customExercises, name),
           sessions: s.sessions.map((sess) =>
             sess.id === sessionId
               ? {
@@ -439,6 +499,7 @@ export const useStore = create<StoreState>()(
         )
         const resolved = resolveMuscles(clean, undefined, s.exerciseLibrary)
         set((st) => ({
+          customExercises: withCustomName(st.customExercises, clean),
           sessions: st.sessions.map((x) =>
             x.id !== sessionId
               ? x
@@ -452,8 +513,10 @@ export const useStore = create<StoreState>()(
                           name: clean,
                           muscles: hasMuscles(resolved) ? resolved : le.muscles,
                           suggestion,
+                          // A new exercise means new working weights; only sets
+                          // already checked off keep what was logged.
                           sets: le.sets.map((se) =>
-                            se.weight == null && !se.done ? { ...se, weight: suggestion.weight } : se,
+                            se.done ? se : { ...se, weight: suggestion.weight },
                           ),
                         },
                   ),
@@ -516,6 +579,7 @@ export const useStore = create<StoreState>()(
           body: s.body,
           measurementFields: s.measurementFields,
           exerciseLibrary: s.exerciseLibrary,
+          customExercises: s.customExercises,
           muscleTargets: s.muscleTargets,
           prefs: s.prefs,
           version: s.version,
@@ -532,9 +596,10 @@ export const useStore = create<StoreState>()(
           measurementFields: data.measurementFields ?? [],
           // v1 backups won't have these — fall back to defaults.
           exerciseLibrary: data.exerciseLibrary ?? {},
+          customExercises: data.customExercises ?? {},
           muscleTargets: data.muscleTargets ?? { ...DEFAULT_MUSCLE_TARGETS },
           prefs: { ...DEFAULT_PREFS, ...(data.prefs ?? {}) },
-          version: data.version ?? 6,
+          version: data.version ?? 7,
         })),
 
       resetAll: () => set(() => ({ ...seedData() })),
@@ -549,6 +614,7 @@ export const useStore = create<StoreState>()(
         body: s.body,
         measurementFields: s.measurementFields,
         exerciseLibrary: s.exerciseLibrary,
+        customExercises: s.customExercises,
         muscleTargets: s.muscleTargets,
         prefs: s.prefs,
         version: s.version,

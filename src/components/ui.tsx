@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { Buddy } from './Buddy'
 
 export function PageHeader({
   title,
@@ -20,12 +21,10 @@ export function PageHeader({
   )
 }
 
-export function EmptyState({ icon, title, children }: { icon: string; title: string; children?: ReactNode }) {
+export function EmptyState({ title, children }: { icon?: string; title: string; children?: ReactNode }) {
   return (
     <div className="card flex flex-col items-center gap-2.5 px-6 py-10 text-center">
-      <div className="flex h-11 w-11 items-center justify-center rounded-full bg-slate-700/40 text-lg">
-        {icon}
-      </div>
+      <Buddy pose="rest" className="h-14 w-14" />
       <h3 className="text-base font-semibold">{title}</h3>
       {children && <p className="max-w-sm text-sm text-slate-400">{children}</p>}
     </div>

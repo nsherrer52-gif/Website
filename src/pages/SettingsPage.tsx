@@ -3,6 +3,9 @@ import { useStore } from '../store/useStore'
 import { todayISO } from '../lib/date'
 import { DEFAULT_MUSCLE_TARGETS, musclesByRegion } from '../lib/muscles'
 import { PageHeader } from '../components/ui'
+import { Buddy } from '../components/Buddy'
+import { resolveMuscles } from '../lib/exerciseLibrary'
+import { muscleName } from '../lib/muscles'
 import type { PersistedData } from '../types'
 
 export function SettingsPage() {
@@ -181,6 +184,9 @@ export function SettingsPage() {
       {/* Workout preferences */}
       <PrefsSection />
 
+      {/* Custom exercise library */}
+      <MyExercisesSection />
+
       {/* Weekly volume targets */}
       <MuscleTargetsSection />
 
@@ -234,12 +240,69 @@ export function SettingsPage() {
         </div>
       </section>
 
-      <p className="pb-2 text-center text-xs text-slate-600">Gym Tracker · v7.0 · data stored on this device</p>
+      <div className="pb-2 text-center">
+        <Buddy pose="rest" className="mx-auto h-9 w-9 opacity-80" />
+        <p className="mt-1 text-xs text-slate-600">Gym Tracker · v8.0 · data stored on this device</p>
+      </div>
     </div>
   )
 }
 
 // ---------------------------------------------------------------------------
+
+/** The user's custom exercises, captured automatically wherever they're used. */
+function MyExercisesSection() {
+  const custom = useStore((s) => s.customExercises)
+  const library = useStore((s) => s.exerciseLibrary)
+  const removeCustomExercise = useStore((s) => s.removeCustomExercise)
+
+  const entries = Object.values(custom).sort((a, b) => a.localeCompare(b))
+
+  return (
+    <section className="space-y-3">
+      <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-400">My exercises</h2>
+      <div className="card space-y-2 p-4">
+        <p className="text-sm text-slate-400">
+          Custom exercises are saved here automatically the first time you use them, and show up
+          in autocomplete and muscle pickers on every day.
+        </p>
+        {entries.length === 0 ? (
+          <p className="text-sm text-slate-500">
+            None yet — type any exercise name the library doesn't know and it'll appear here.
+          </p>
+        ) : (
+          entries.map((name) => {
+            const muscles = resolveMuscles(name, undefined, library)
+            const summary = Object.entries(muscles)
+              .filter(([, v]) => v > 0)
+              .map(([m, v]) => `${muscleName(m)} ${v === 1 ? '1' : '½'}`)
+              .join(' · ')
+            return (
+              <div
+                key={name}
+                className="flex items-center justify-between gap-3 border-t border-slate-700/40 pt-2 first:border-t-0 first:pt-0"
+              >
+                <div className="min-w-0">
+                  <div className="truncate text-sm font-medium">{name}</div>
+                  <div className="truncate text-xs text-slate-500">
+                    {summary || 'no muscles assigned yet — set them in the Program editor'}
+                  </div>
+                </div>
+                <button
+                  className="shrink-0 text-slate-500 hover:text-rose-400"
+                  aria-label={`Remove ${name}`}
+                  onClick={() => confirm(`Forget "${name}"? Logged history is kept.`) && removeCustomExercise(name)}
+                >
+                  ✕
+                </button>
+              </div>
+            )
+          })
+        )}
+      </div>
+    </section>
+  )
+}
 
 const REST_OPTIONS = [
   { value: 0, label: 'Off' },

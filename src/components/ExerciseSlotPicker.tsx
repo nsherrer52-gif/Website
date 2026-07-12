@@ -21,7 +21,11 @@ export function ExerciseSlotPicker({
   onPick: (name: string) => void
 }) {
   const library = useStore((s) => s.exerciseLibrary)
-  const options = useMemo(() => exercisesForMuscle(muscleId, library), [muscleId, library])
+  const customNames = useStore((s) => s.customExercises)
+  const options = useMemo(
+    () => exercisesForMuscle(muscleId, library, customNames),
+    [muscleId, library, customNames],
+  )
   const inList = options.some((o) => o.name === value)
 
   function handle(v: string) {
