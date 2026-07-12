@@ -266,6 +266,15 @@ function DayEditor({ day, index, total }: { day: WorkoutDay; index: number; tota
                 </div>
               </div>
 
+              <input
+                className="input mt-2 py-2 text-sm"
+                placeholder="Pinned note (always shown in the logger), e.g. seat height 4"
+                value={ex.pinnedNote ?? ''}
+                onChange={(e) =>
+                  updateExercise(day.id, ex.id, { pinnedNote: e.target.value || undefined })
+                }
+              />
+
               <ExerciseMuscles dayId={day.id} exId={ex.id} name={ex.name} muscles={ex.muscles} />
             </div>
           ))}

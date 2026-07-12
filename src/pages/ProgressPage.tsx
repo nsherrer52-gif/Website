@@ -9,6 +9,9 @@ import { projectTrend, type DatedPoint } from '../lib/progression'
 import { PageHeader, EmptyState, Stat, PRBadge } from '../components/ui'
 import { LineChartCard, type ChartPoint } from '../components/LineChartCard'
 import { MusclesTab } from './MusclesTab'
+import { VersusTab } from './VersusTab'
+import { TrainingHeatmap } from '../components/TrainingHeatmap'
+import { weeklyStreak, workoutsThisMonth } from '../lib/consistency'
 
 type Metric = '1rm' | 'top' | 'volume'
 const METRICS: { key: Metric; label: string }[] = [
@@ -17,11 +20,12 @@ const METRICS: { key: Metric; label: string }[] = [
   { key: 'volume', label: 'Volume' },
 ]
 
-type Tab = 'charts' | 'muscles' | 'history'
+type Tab = 'charts' | 'muscles' | 'history' | 'versus'
 const TABS: { key: Tab; label: string }[] = [
   { key: 'charts', label: 'Charts' },
   { key: 'muscles', label: 'Muscles' },
   { key: 'history', label: 'History' },
+  { key: 'versus', label: 'Versus' },
 ]
 
 export function ProgressPage() {
@@ -33,7 +37,7 @@ export function ProgressPage() {
     <div className="space-y-5">
       <PageHeader title="Progress" subtitle="Review how you're trending over time." />
 
-      <div className="grid grid-cols-3 gap-1 rounded-xl bg-slate-800 p-1">
+      <div className="grid grid-cols-4 gap-1 rounded-xl bg-slate-800 p-1">
         {TABS.map((t) => (
           <button
             key={t.key}
@@ -50,6 +54,7 @@ export function ProgressPage() {
       {tab === 'charts' && <ChartsTab />}
       {tab === 'muscles' && <MusclesTab />}
       {tab === 'history' && <HistoryTab />}
+      {tab === 'versus' && <VersusTab />}
     </div>
   )
 }
@@ -200,8 +205,22 @@ function HistoryTab() {
     )
   }
 
+  const streak = profile ? weeklyStreak(sessions, profile.id) : 0
+  const monthCount = profile ? workoutsThisMonth(sessions, profile.id) : 0
+
   return (
     <div className="space-y-3">
+      <div className="grid grid-cols-2 gap-3">
+        <Stat
+          label="Week streak"
+          value={`${streak} wk${streak === 1 ? '' : 's'}`}
+          accent={streak > 0 ? profile?.color : undefined}
+        />
+        <Stat label="This month" value={`${monthCount} workout${monthCount === 1 ? '' : 's'}`} />
+      </div>
+
+      {profile && <TrainingHeatmap sessions={sessions} profileId={profile.id} />}
+
       {sessions.map((s) => {
         const open = openId === s.id
         const vol = round1(sessionVolume(s))

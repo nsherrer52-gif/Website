@@ -20,6 +20,7 @@ import { uid } from '../lib/id'
 import { todayISO } from '../lib/date'
 import { DEFAULT_PREFS, makeProfile, seedData } from '../lib/seed'
 import { hasMuscles, normalizeName, resolveMuscles } from '../lib/exerciseLibrary'
+import { applyWeightCascade } from '../lib/cascade'
 import { DEFAULT_MUSCLE_TARGETS } from '../lib/muscles'
 import { lastPerformance } from '../lib/history'
 import { suggestForExercise } from '../lib/progression'
@@ -86,6 +87,8 @@ interface Actions {
     setId: ID,
     patch: Partial<{ reps: number | null; weight: number | null; done: boolean; rir: number | null }>,
   ) => void
+  /** Set a set's weight and cascade it to later in-lockstep sets. */
+  updateSetWeight: (sessionId: ID, exIndex: number, setId: ID, weight: number | null) => void
   addSet: (sessionId: ID, exIndex: number) => void
   removeSet: (sessionId: ID, exIndex: number, setId: ID) => void
   addExerciseToSession: (sessionId: ID, name: string) => void
@@ -332,6 +335,7 @@ export const useStore = create<StoreState>()(
               targetReps: ex.targetReps,
               notes: undefined,
               slotMuscle: ex.slotMuscle,
+              pinnedNote: ex.pinnedNote,
               // Snapshot the muscle map so weekly volume stays accurate later.
               muscles: resolveMuscles(ex.name, ex.muscles, s.exerciseLibrary),
               suggestion,
@@ -354,6 +358,17 @@ export const useStore = create<StoreState>()(
             if (sess.id !== sessionId) return sess
             const exercises = sess.exercises.map((ex, i) =>
               i === exIndex ? { ...ex, sets: replaceById<SetEntry>(ex.sets, setId, patch) } : ex,
+            )
+            return { ...sess, exercises }
+          }),
+        })),
+
+      updateSetWeight: (sessionId, exIndex, setId, weight) =>
+        set((s) => ({
+          sessions: s.sessions.map((sess) => {
+            if (sess.id !== sessionId) return sess
+            const exercises = sess.exercises.map((ex, i) =>
+              i === exIndex ? { ...ex, sets: applyWeightCascade(ex.sets, setId, weight) } : ex,
             )
             return { ...sess, exercises }
           }),
@@ -519,7 +534,7 @@ export const useStore = create<StoreState>()(
           exerciseLibrary: data.exerciseLibrary ?? {},
           muscleTargets: data.muscleTargets ?? { ...DEFAULT_MUSCLE_TARGETS },
           prefs: { ...DEFAULT_PREFS, ...(data.prefs ?? {}) },
-          version: data.version ?? 5,
+          version: data.version ?? 6,
         })),
 
       resetAll: () => set(() => ({ ...seedData() })),

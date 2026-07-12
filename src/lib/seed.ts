@@ -57,6 +57,7 @@ export function defaultProgram(): Program {
 
 export const DEFAULT_PREFS = {
   restSeconds: 120,
+  restSound: true,
   barWeightLb: 45,
   barWeightKg: 20,
 }
@@ -85,7 +86,7 @@ export function seedData(): PersistedData {
     exerciseLibrary: {},
     muscleTargets: { ...DEFAULT_MUSCLE_TARGETS },
     prefs: { ...DEFAULT_PREFS },
-    version: 5,
+    version: 6,
   }
 }
 

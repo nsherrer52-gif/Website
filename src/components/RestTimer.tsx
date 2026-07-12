@@ -1,16 +1,36 @@
 import { useEffect, useState } from 'react'
 import { IconTimer } from './icons'
+import { beep } from '../lib/beep'
+
+/** Best-effort system notification when the app isn't visible. */
+function notifyRestOver() {
+  if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return
+  navigator.serviceWorker?.ready
+    .then((reg) =>
+      reg.showNotification('Rest over — go!', {
+        body: 'Time for your next set.',
+        tag: 'rest-timer', // repeats replace instead of stacking
+        icon: './icon.svg',
+      }),
+    )
+    .catch(() => {})
+}
 
 /**
  * Floating rest countdown pill, shown above the bottom nav during a workout.
- * Starts when a set is checked off; vibrates (where supported) when time's up.
+ * Starts when a set is checked off. On completion: vibrates, optionally beeps,
+ * and — if the app is hidden — fires a system notification (reliable on
+ * Android; iOS suspends background web apps, so there it alerts as soon as
+ * the app becomes visible again).
  */
 export function RestTimer({
   endsAt,
+  sound,
   onExtend,
   onDismiss,
 }: {
   endsAt: number
+  sound: boolean
   onExtend: (ms: number) => void
   onDismiss: () => void
 }) {
@@ -18,13 +38,19 @@ export function RestTimer({
 
   useEffect(() => {
     const t = setInterval(() => setNow(Date.now()), 250)
-    return () => clearInterval(t)
+    // Catch up immediately when the app returns to the foreground.
+    const onVis = () => setNow(Date.now())
+    document.addEventListener('visibilitychange', onVis)
+    return () => {
+      clearInterval(t)
+      document.removeEventListener('visibilitychange', onVis)
+    }
   }, [])
 
   const remaining = Math.max(0, Math.ceil((endsAt - now) / 1000))
   const done = remaining <= 0
 
-  // Buzz once when the countdown crosses zero, then auto-dismiss shortly after.
+  // Alert once when the countdown crosses zero, then auto-dismiss shortly after.
   useEffect(() => {
     if (!done) return
     try {
@@ -32,9 +58,11 @@ export function RestTimer({
     } catch {
       /* not supported */
     }
+    if (sound) beep()
+    if (document.hidden) notifyRestOver()
     const t = setTimeout(onDismiss, 6000)
     return () => clearTimeout(t)
-  }, [done, onDismiss])
+  }, [done, sound, onDismiss])
 
   const mins = Math.floor(remaining / 60)
   const secs = remaining % 60

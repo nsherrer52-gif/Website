@@ -44,6 +44,8 @@ export interface Exercise {
    * and pick the specific exercise later — in the editor or mid-workout.
    */
   slotMuscle?: MuscleId
+  /** Short note always shown in the logger, e.g. "seat height 4". */
+  pinnedNote?: string
 }
 
 /** One workout in the rotation, e.g. "Day A — Push". */
@@ -115,6 +117,8 @@ export interface LoggedExercise {
   suggestion?: ExerciseSuggestion
   /** Carried from a program slot; lets you pick the exercise mid-workout. */
   slotMuscle?: MuscleId
+  /** Snapshot of the program exercise's pinned note. */
+  pinnedNote?: string
 }
 
 /** A complete (or in-progress) workout for one profile on one date. */
@@ -169,6 +173,8 @@ export interface MuscleTarget {
 export interface Prefs {
   /** Rest timer length in seconds; 0 disables the timer. */
   restSeconds: number
+  /** Play a short beep when the rest timer ends. */
+  restSound: boolean
   /** Barbell weight used by the plate calculator, per unit. */
   barWeightLb: number
   barWeightKg: number

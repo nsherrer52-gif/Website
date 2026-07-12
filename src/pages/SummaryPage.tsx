@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useStore } from '../store/useStore'
-import { sessionVolume, round1 } from '../lib/stats'
+import { funEquivalence, lifetimeTonnage, round1, sessionVolume } from '../lib/stats'
 import { computePRSet, prKey } from '../lib/pr'
 import { muscleVolumeForSessions, roundVol, doneSetCount } from '../lib/volume'
 import { muscleName } from '../lib/muscles'
@@ -78,6 +78,7 @@ export function SummaryPage() {
           {session.dayName} · {formatLongDate(session.date)}
           {durationMin != null && ` · ${durationMin} min`}
         </p>
+        <Tonnage sessionsAll={sessions} profileId={session.profileId} unit={profile?.unit ?? 'lb'} />
         {vsLast != null && (
           <p
             className={`mt-2 text-sm font-semibold ${
@@ -132,5 +133,31 @@ export function SummaryPage() {
         </button>
       </div>
     </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+
+/** "Lifetime lifted: 1,240,000 lb · ≈ 92 elephants" */
+function Tonnage({
+  sessionsAll,
+  profileId,
+  unit,
+}: {
+  sessionsAll: Parameters<typeof lifetimeTonnage>[0]
+  profileId: string
+  unit: 'lb' | 'kg'
+}) {
+  const total = Math.round(lifetimeTonnage(sessionsAll, profileId))
+  if (total <= 0) return null
+  const equiv = funEquivalence(total, unit)
+  return (
+    <p className="mt-2 text-xs text-slate-500">
+      Lifetime lifted:{' '}
+      <span className="font-semibold text-slate-300">
+        {total.toLocaleString()} {unit}
+      </span>
+      {equiv && <span> · {equiv}</span>}
+    </p>
   )
 }

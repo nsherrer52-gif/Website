@@ -10,6 +10,7 @@ import { Stepper } from '../components/Stepper'
 import { ExerciseDatalist } from '../components/ExerciseDatalist'
 import { ExerciseSlotPicker } from '../components/ExerciseSlotPicker'
 import { RestTimer } from '../components/RestTimer'
+import { primeAudio } from '../lib/beep'
 import { platesForUnit, platesPerSide, formatPlates } from '../lib/plates'
 import type { LoggedExercise, MuscleId, WeightUnit } from '../types'
 
@@ -28,6 +29,7 @@ export function WorkoutPage() {
   )
 
   const updateSet = useStore((s) => s.updateSet)
+  const updateSetWeight = useStore((s) => s.updateSetWeight)
   const addSet = useStore((s) => s.addSet)
   const removeSet = useStore((s) => s.removeSet)
   const addExerciseToSession = useStore((s) => s.addExerciseToSession)
@@ -63,9 +65,18 @@ export function WorkoutPage() {
     patch: { reps?: number | null; weight?: number | null; done?: boolean; rir?: number | null },
   ) {
     updateSet(session!.id, exIndex, setId, patch)
-    // Checking a set off starts the rest countdown (if enabled in Settings).
-    if (patch.done === true && prefs.restSeconds > 0 && !session!.completedAt) {
-      setRestEndsAt(Date.now() + prefs.restSeconds * 1000)
+    // Checking a set off: light haptic tick, prime audio for the end-of-rest
+    // beep (needs a user gesture), and start the rest countdown.
+    if (patch.done === true && !session!.completedAt) {
+      try {
+        navigator.vibrate?.(15)
+      } catch {
+        /* not supported */
+      }
+      if (prefs.restSeconds > 0) {
+        if (prefs.restSound) primeAudio()
+        setRestEndsAt(Date.now() + prefs.restSeconds * 1000)
+      }
     }
   }
 
@@ -142,6 +153,7 @@ export function WorkoutPage() {
             barWeight={barWeight}
             isPR={prs.has(prKey(session.id, exIndex))}
             onSetChange={(setId, patch) => handleSetChange(exIndex, setId, patch)}
+            onWeightChange={(setId, weight) => updateSetWeight(session.id, exIndex, setId, weight)}
             onAddSet={() => addSet(session.id, exIndex)}
             onRemoveSet={(setId) => removeSet(session.id, exIndex, setId)}
             onNotes={(notes) => setExerciseNotes(session.id, exIndex, notes)}
@@ -152,6 +164,7 @@ export function WorkoutPage() {
       {restEndsAt !== null && (
         <RestTimer
           endsAt={restEndsAt}
+          sound={prefs.restSound}
           onExtend={(ms) => setRestEndsAt((v) => (v ?? Date.now()) + ms)}
           onDismiss={() => setRestEndsAt(null)}
         />
@@ -292,6 +305,7 @@ function ExerciseCard({
   barWeight,
   isPR,
   onSetChange,
+  onWeightChange,
   onAddSet,
   onRemoveSet,
   onNotes,
@@ -305,6 +319,8 @@ function ExerciseCard({
     setId: string,
     patch: { reps?: number | null; weight?: number | null; done?: boolean; rir?: number | null },
   ) => void
+  /** Weight edits go through the cascading store action. */
+  onWeightChange: (setId: string, weight: number | null) => void
   onAddSet: () => void
   onRemoveSet: (setId: string) => void
   onNotes: (notes: string) => void
@@ -317,6 +333,11 @@ function ExerciseCard({
   const grid = showRIR
     ? 'grid grid-cols-[1.5rem_1fr_1fr_2.75rem_2.25rem_1.25rem] items-center gap-1.5'
     : 'grid grid-cols-[1.5rem_1fr_1fr_2.25rem_1.25rem] items-center gap-1.5'
+
+  // Ghost placeholders: what you did on the same set number last time.
+  const lastReps = (last?.exercise.sets ?? []).map((s) =>
+    s.reps != null ? String(s.reps) : undefined,
+  )
 
   const muscleHint = Object.entries(ex.muscles ?? {})
     .filter(([, v]) => v > 0)
@@ -336,6 +357,9 @@ function ExerciseCard({
       </div>
 
       {muscleHint && <div className="mt-0.5 text-xs text-slate-500">{muscleHint}</div>}
+      {ex.pinnedNote && (
+        <div className="mt-1 text-xs italic text-slate-300">{ex.pinnedNote}</div>
+      )}
 
       {/* The coach's prescription for this session */}
       {suggestion && suggestion.action !== 'baseline' && (
@@ -377,12 +401,13 @@ function ExerciseCard({
               value={s.weight}
               step={weightStep}
               ariaLabel="weight"
-              onChange={(v) => onSetChange(s.id, { weight: v })}
+              onChange={(v) => onWeightChange(s.id, v)}
             />
             <Stepper
               value={s.reps}
               step={1}
               ariaLabel="reps"
+              placeholder={lastReps[i] ?? '—'}
               onChange={(v) => onSetChange(s.id, { reps: v })}
             />
             {showRIR && (

@@ -234,7 +234,7 @@ export function SettingsPage() {
         </div>
       </section>
 
-      <p className="pb-2 text-center text-xs text-slate-600">Gym Tracker · v5.0 · data stored on this device</p>
+      <p className="pb-2 text-center text-xs text-slate-600">Gym Tracker · v7.0 · data stored on this device</p>
     </div>
   )
 }
@@ -255,6 +255,14 @@ const REST_OPTIONS = [
 function PrefsSection() {
   const prefs = useStore((s) => s.prefs)
   const setPrefs = useStore((s) => s.setPrefs)
+  const [notifState, setNotifState] = useState<string>(() =>
+    typeof Notification !== 'undefined' ? Notification.permission : 'unsupported',
+  )
+
+  function requestNotifications() {
+    if (typeof Notification === 'undefined') return
+    Notification.requestPermission().then((p) => setNotifState(p))
+  }
 
   return (
     <section className="space-y-3">
@@ -276,6 +284,56 @@ function PrefsSection() {
               </option>
             ))}
           </select>
+        </div>
+
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <span className="label mb-0">Timer sound</span>
+            <p className="text-xs text-slate-500">Short beep when rest ends</p>
+          </div>
+          <div className="grid grid-cols-2 gap-1 rounded-xl bg-slate-900/70 p-1">
+            {(
+              [
+                [true, 'On'],
+                [false, 'Off'],
+              ] as [boolean, string][]
+            ).map(([v, label]) => (
+              <button
+                key={label}
+                onClick={() => setPrefs({ restSound: v })}
+                className={`rounded-lg px-4 py-1.5 text-sm font-semibold ${
+                  prefs.restSound === v ? 'bg-slate-700 text-white' : 'text-slate-400'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <span className="label mb-0">Notifications</span>
+            <p className="text-xs text-slate-500">
+              Alert when rest ends and the app is in the background. Reliable on Android; iPhone
+              pauses background web apps, so there it alerts when you switch back.
+            </p>
+          </div>
+          {notifState === 'granted' ? (
+            <span className="shrink-0 text-sm font-semibold text-emerald-400">Enabled</span>
+          ) : notifState === 'denied' ? (
+            <span className="shrink-0 text-right text-xs text-slate-500">
+              Blocked — allow in
+              <br />
+              browser settings
+            </span>
+          ) : notifState === 'unsupported' ? (
+            <span className="shrink-0 text-xs text-slate-500">Not supported</span>
+          ) : (
+            <button className="btn-ghost shrink-0 px-3 py-1.5 text-sm" onClick={requestNotifications}>
+              Enable
+            </button>
+          )}
         </div>
         <div>
           <span className="label">Barbell weight (plate calculator)</span>
