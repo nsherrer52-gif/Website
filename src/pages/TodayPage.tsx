@@ -6,9 +6,11 @@ import { formatDate } from '../lib/date'
 import { currentWeekKey, currentWeekVolume, doneSetCount, isoWeekKey, roundVol } from '../lib/volume'
 import { DEFAULT_MUSCLE_TARGETS, muscleName } from '../lib/muscles'
 import { weeklyRecommendations } from '../lib/coach'
+import { overallMomentum } from '../lib/momentum'
 import { PageHeader, EmptyState, Stat } from '../components/ui'
 import { Buddy } from '../components/Buddy'
 import { MuscleVolumeBar } from '../components/MuscleVolumeBar'
+import { MomentumBadge } from '../components/MomentumBadge'
 
 export function TodayPage() {
   const navigate = useNavigate()
@@ -72,6 +74,8 @@ export function TodayPage() {
     return parts.length > 0 ? `Coach: ${parts.join(' · ')}` : null
   }, [sessions, pid, library, targets])
 
+  const momentum = useMemo(() => overallMomentum(sessions, pid), [sessions, pid])
+
   function start(dayId: string) {
     const id = startSession(dayId)
     navigate(`/workout/${id}`)
@@ -79,7 +83,22 @@ export function TodayPage() {
 
   return (
     <div className="space-y-5">
-      <PageHeader title={`Hi, ${profile?.name ?? ''}`} subtitle="Ready to train?" />
+      <PageHeader
+        title={`Hi, ${profile?.name ?? ''}`}
+        subtitle="Ready to train?"
+        action={
+          momentum && (
+            <div className="text-right">
+              <div className="text-[10px] font-medium uppercase tracking-[0.14em] text-slate-500">
+                Strength
+              </div>
+              <div className="mt-1">
+                <MomentumBadge level={momentum.level} />
+              </div>
+            </div>
+          )
+        }
+      />
 
       <div className="grid grid-cols-2 gap-3">
         <Stat label="This week" value={`${thisWeekCount} workout${thisWeekCount === 1 ? '' : 's'}`} accent={profile?.color} />

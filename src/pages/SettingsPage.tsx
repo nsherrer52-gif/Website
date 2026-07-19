@@ -242,7 +242,7 @@ export function SettingsPage() {
 
       <div className="pb-2 text-center">
         <Buddy pose="rest" className="mx-auto h-9 w-9 opacity-80" />
-        <p className="mt-1 text-xs text-slate-600">Gym Tracker · v8.0 · data stored on this device</p>
+        <p className="mt-1 text-xs text-slate-600">Gym Tracker · v10.0 · data stored on this device</p>
       </div>
     </div>
   )

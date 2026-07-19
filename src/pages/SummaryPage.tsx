@@ -5,6 +5,8 @@ import { funEquivalence, lifetimeTonnage, round1, sessionVolume } from '../lib/s
 import { computePRSet, prKey } from '../lib/pr'
 import { muscleVolumeForSessions, roundVol, doneSetCount } from '../lib/volume'
 import { muscleName } from '../lib/muscles'
+import { recentPerformances } from '../lib/history'
+import { buildSetModel, setTarget } from '../lib/progression'
 import { formatLongDate } from '../lib/date'
 import { summarizeSets } from '../lib/history'
 import { EmptyState, Stat, PRBadge } from '../components/ui'
@@ -69,6 +71,29 @@ export function SummaryPage() {
     ? Math.max(1, Math.round((session.completedAt - session.startedAt) / 60000))
     : null
 
+  // Goals hit: score this session's done sets against the model as it stood
+  // before the session (same math the logger used to show the goals).
+  const goals = useMemo(() => {
+    if (!session) return null
+    let hit = 0
+    let total = 0
+    for (const ex of session.exercises) {
+      if (!ex.name.trim()) continue
+      const hist = recentPerformances(sessions, session.profileId, ex.name, session.id)
+      const model = buildSetModel(hist)
+      if (!model) continue
+      const last = hist[0]
+      ex.sets.forEach((s, i) => {
+        if (!s.done || s.weight == null || s.reps == null) return
+        const ls = last?.sets[i]
+        const lastSame = ls && ls.weight === s.weight ? ls.reps : null
+        total++
+        if (s.reps >= setTarget(model, s.weight, i, lastSame)) hit++
+      })
+    }
+    return total > 0 ? { hit, total } : null
+  }, [session, sessions])
+
   return (
     <div className="space-y-5">
       <div className="card border-sky-500/40 p-5 text-center">
@@ -78,6 +103,12 @@ export function SummaryPage() {
           {session.dayName} · {formatLongDate(session.date)}
           {durationMin != null && ` · ${durationMin} min`}
         </p>
+        {goals && (
+          <p className="mt-2 text-sm font-semibold text-sky-400">
+            Rep goals hit: {goals.hit} of {goals.total}
+            {goals.hit >= goals.total && goals.total > 0 ? ' — clean sweep' : ''}
+          </p>
+        )}
         <Tonnage sessionsAll={sessions} profileId={session.profileId} unit={profile?.unit ?? 'lb'} />
         {vsLast != null && (
           <p

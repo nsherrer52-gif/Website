@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { useStore, useActiveProfile } from '../store/useStore'
 import { lastPerformance, recentPerformances, summarizeSets } from '../lib/history'
 import { buildSetModel, setTarget } from '../lib/progression'
+import { exerciseMomentum } from '../lib/momentum'
 import { formatLongDate } from '../lib/date'
 import { computePRSet, prKey } from '../lib/pr'
 import { muscleName } from '../lib/muscles'
@@ -11,6 +12,7 @@ import { Stepper } from '../components/Stepper'
 import { ExerciseDatalist } from '../components/ExerciseDatalist'
 import { ExerciseSlotPicker } from '../components/ExerciseSlotPicker'
 import { RestTimer } from '../components/RestTimer'
+import { MomentumBadge } from '../components/MomentumBadge'
 import { primeAudio } from '../lib/beep'
 import { platesForUnit, platesPerSide, formatPlates } from '../lib/plates'
 import type { LoggedExercise, MuscleId, WeightUnit } from '../types'
@@ -154,6 +156,7 @@ export function WorkoutPage() {
             unit={profile?.unit ?? 'lb'}
             barWeight={barWeight}
             isPR={prs.has(prKey(session.id, exIndex))}
+            momentum={exerciseMomentum(allSessions, session.profileId, ex.name, session.id)?.level ?? null}
             onSetChange={(setId, patch) => handleSetChange(exIndex, setId, patch)}
             onWeightChange={(setId, weight) => updateSetWeight(session.id, exIndex, setId, weight)}
             onSwap={(name) => fillSessionSlot(session.id, exIndex, name)}
@@ -308,6 +311,7 @@ function ExerciseCard({
   unit,
   barWeight,
   isPR,
+  momentum,
   onSetChange,
   onWeightChange,
   onSwap,
@@ -322,6 +326,7 @@ function ExerciseCard({
   unit: string
   barWeight: number
   isPR: boolean
+  momentum: import('../lib/momentum').MomentumLevel | null
   onSetChange: (
     setId: string,
     patch: { reps?: number | null; weight?: number | null; done?: boolean; rir?: number | null },
@@ -376,6 +381,7 @@ function ExerciseCard({
         <h3 className="flex items-center gap-1.5 text-lg font-bold">
           {ex.name}
           {isPR && <PRBadge />}
+          {momentum && <MomentumBadge level={momentum} compact />}
         </h3>
         {ex.targetReps && <span className="text-xs text-slate-400">target {ex.targetReps} reps</span>}
       </div>

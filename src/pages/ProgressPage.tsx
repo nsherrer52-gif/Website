@@ -12,6 +12,8 @@ import { MusclesTab } from './MusclesTab'
 import { VersusTab } from './VersusTab'
 import { TrainingHeatmap } from '../components/TrainingHeatmap'
 import { weeklyStreak, workoutsThisMonth } from '../lib/consistency'
+import { exerciseMomentum } from '../lib/momentum'
+import { MomentumBadge } from '../components/MomentumBadge'
 
 type Metric = '1rm' | 'top' | 'volume'
 const METRICS: { key: Metric; label: string }[] = [
@@ -125,6 +127,7 @@ function ChartsTab() {
   }
 
   const unit = metric === 'volume' ? `${profile?.unit}·reps` : profile?.unit
+  const momentum = profile ? exerciseMomentum(sessions, profile.id, exercise) : null
 
   return (
     <div className="space-y-4">
@@ -162,9 +165,13 @@ function ChartsTab() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-3 gap-3">
         <Stat label={`Best ${METRICS.find((m) => m.key === metric)!.label}`} value={`${best} ${unit ?? ''}`} accent={profile?.color} />
         <Stat label="Sessions" value={points.length} />
+        <Stat
+          label="Momentum"
+          value={momentum ? <MomentumBadge level={momentum.level} compact /> : '—'}
+        />
       </div>
 
       <LineChartCard
@@ -177,7 +184,8 @@ function ChartsTab() {
       />
       <p className="px-1 text-xs text-slate-500">
         Estimated 1RM uses the Epley formula (weight × (1 + reps ÷ 30)). It's an estimate to track
-        trends, not a max you should attempt.
+        trends, not a max you should attempt. Momentum compares your recent sets to the rep goals
+        the app predicted: ▲▲ beating them · ▲ on pace · ► slightly under · ▼ falling behind.
       </p>
     </div>
   )
