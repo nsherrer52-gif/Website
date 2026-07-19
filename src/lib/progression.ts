@@ -115,6 +115,90 @@ export function suggestForExercise(
 }
 
 // ---------------------------------------------------------------------------
+// Per-set rep targets (RP-style).
+//
+// Two things are learned from your history per exercise:
+//   1. How strong you are — the best recent estimated 1RM, counting logged
+//      RIR as reps you had in the tank. Inverting Epley predicts first-set
+//      reps at ANY weight, so targets survive weight jumps.
+//   2. How your reps fall off set to set — your personal fatigue curve,
+//      averaged over recent sessions and blended with a sensible prior until
+//      there's enough data.
+// A target is then prescribed per set BEFORE you lift, kept reasonable: never
+// below what you did last time at that weight, never more than +2 above it.
+// ---------------------------------------------------------------------------
+
+export interface SetTargetModel {
+  /** Reference estimated 1RM (RIR-aware) from recent history. */
+  e1RM: number
+  /** Rep retention per set index: [1, 0.93, …]. Index 0 is always 1. */
+  dropoff: number[]
+}
+
+/** Typical rep retention by set with ~2min rests, used until data exists. */
+const DROP_PRIOR = [1, 0.93, 0.88, 0.84, 0.8, 0.77]
+const PRIOR_WEIGHT = 2
+
+import { bestPotential1RM } from './stats'
+
+/**
+ * Fit the target model from recent performances of one exercise
+ * (newest first). Returns null with no usable history.
+ */
+export function buildSetModel(history: LoggedExercise[]): SetTargetModel | null {
+  let e1RM = 0
+  const sums: number[] = []
+  const counts: number[] = []
+
+  for (const ex of history) {
+    e1RM = Math.max(e1RM, bestPotential1RM(ex))
+    const used = workingSets(ex)
+    const first = used[0]?.reps ?? 0
+    if (used.length < 2 || first <= 0) continue
+    used.forEach((s, i) => {
+      if (i === 0) return
+      const idx = Math.min(i, DROP_PRIOR.length - 1)
+      sums[idx] = (sums[idx] ?? 0) + Math.min(1.15, s.reps! / first)
+      counts[idx] = (counts[idx] ?? 0) + 1
+    })
+  }
+  if (e1RM <= 0) return null
+
+  const dropoff = DROP_PRIOR.map((prior, i) => {
+    if (i === 0) return 1
+    const n = counts[i] ?? 0
+    if (n === 0) return prior
+    return Math.min(1.1, (prior * PRIOR_WEIGHT + (sums[i]! / n) * n) / (PRIOR_WEIGHT + n))
+  })
+  return { e1RM, dropoff }
+}
+
+/** Inverse Epley: predicted fresh-set reps at a weight, clamped to 1–30. */
+export function predictReps(e1RM: number, weight: number): number {
+  if (weight <= 0) return 0
+  return Math.max(1, Math.min(30, 30 * (e1RM / weight - 1)))
+}
+
+/**
+ * The rep goal for one set at a given weight. `lastSameSetReps` (same set
+ * number, same weight, last session) bounds the push: at least match it,
+ * never more than +2 over it.
+ */
+export function setTarget(
+  model: SetTargetModel,
+  weight: number,
+  setIndex: number,
+  lastSameSetReps?: number | null,
+): number {
+  const drop = model.dropoff[Math.min(setIndex, model.dropoff.length - 1)]
+  let t = Math.round(predictReps(model.e1RM, weight) * drop)
+  if (lastSameSetReps != null && lastSameSetReps > 0) {
+    t = Math.max(Math.min(t, lastSameSetReps + 2), lastSameSetReps)
+  }
+  return Math.max(1, t)
+}
+
+// ---------------------------------------------------------------------------
 // Trend projection: least-squares fit over dated points, extended forward.
 // Used by the Progress charts to show where a lift is heading.
 // ---------------------------------------------------------------------------

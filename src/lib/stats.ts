@@ -20,6 +20,20 @@ export function bestEstimated1RM(ex: LoggedExercise): number {
   return best
 }
 
+/**
+ * Best estimated 1RM including reps-in-reserve: what you COULD have done.
+ * A set of 8 at RIR 2 counts as a 10-rep effort. Falls back to plain reps
+ * when RIR wasn't logged.
+ */
+export function bestPotential1RM(ex: LoggedExercise): number {
+  let best = 0
+  for (const s of ex.sets) {
+    if (s.weight == null || s.reps == null || s.reps <= 0) continue
+    best = Math.max(best, epley1RM(s.weight, s.reps + (s.rir ?? 0)))
+  }
+  return best
+}
+
 /** Heaviest weight lifted for any set of a logged exercise. */
 export function topSetWeight(ex: LoggedExercise): number {
   let best = 0

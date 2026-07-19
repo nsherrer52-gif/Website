@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useStore, useActiveProfile } from '../store/useStore'
-import { lastPerformance, summarizeSets } from '../lib/history'
+import { lastPerformance, recentPerformances, summarizeSets } from '../lib/history'
+import { buildSetModel, setTarget } from '../lib/progression'
 import { formatLongDate } from '../lib/date'
 import { computePRSet, prKey } from '../lib/pr'
 import { muscleName } from '../lib/muscles'
@@ -149,6 +150,7 @@ export function WorkoutPage() {
             key={ex.exerciseId + exIndex}
             ex={ex}
             last={lastPerformance(allSessions, session.profileId, ex.name, session.id)}
+            history={recentPerformances(allSessions, session.profileId, ex.name, session.id)}
             unit={profile?.unit ?? 'lb'}
             barWeight={barWeight}
             isPR={prs.has(prKey(session.id, exIndex))}
@@ -302,6 +304,7 @@ function SlotCard({
 function ExerciseCard({
   ex,
   last,
+  history,
   unit,
   barWeight,
   isPR,
@@ -314,6 +317,8 @@ function ExerciseCard({
 }: {
   ex: LoggedExercise
   last: { date: string; exercise: LoggedExercise } | null
+  /** Recent performances of this exercise, for the per-set target model. */
+  history: LoggedExercise[]
   unit: string
   barWeight: number
   isPR: boolean
@@ -346,6 +351,17 @@ function ExerciseCard({
   const lastReps = (last?.exercise.sets ?? []).map((s) =>
     s.reps != null ? String(s.reps) : undefined,
   )
+
+  // The per-set target model: your recent strength (RIR-aware e1RM) plus your
+  // personal set-to-set fatigue curve. Goals recompute live with the weight.
+  const model = useMemo(() => buildSetModel(history), [history])
+
+  function goalFor(setIndex: number, weight: number | null): number | null {
+    if (!model || weight == null || weight <= 0) return null
+    const ls = last?.exercise.sets[setIndex]
+    const lastSame = ls && ls.weight === weight ? ls.reps : null
+    return setTarget(model, weight, setIndex, lastSame)
+  }
 
   const muscleHint = Object.entries(ex.muscles ?? {})
     .filter(([, v]) => v > 0)
@@ -402,9 +418,17 @@ function ExerciseCard({
       </div>
 
       <div className="mt-1 space-y-1.5">
-        {ex.sets.map((s, i) => (
+        {ex.sets.map((s, i) => {
+          const goal = goalFor(i, s.weight)
+          const hitGoal = s.done && goal != null && s.reps != null && s.reps >= goal
+          return (
           <div key={s.id} className={grid}>
-            <span className="text-center text-sm font-semibold text-slate-400">{i + 1}</span>
+            <span
+              className={`text-center text-sm font-semibold ${hitGoal ? 'text-sky-500' : 'text-slate-400'}`}
+              title={goal != null ? `Goal: ${goal} reps` : undefined}
+            >
+              {i + 1}
+            </span>
             <Stepper
               value={s.weight}
               step={weightStep}
@@ -415,7 +439,7 @@ function ExerciseCard({
               value={s.reps}
               step={1}
               ariaLabel="reps"
-              placeholder={lastReps[i] ?? '—'}
+              placeholder={goal != null ? String(goal) : (lastReps[i] ?? '—')}
               onChange={(v) => onSetChange(s.id, { reps: v })}
             />
             {showRIR && (
@@ -454,8 +478,16 @@ function ExerciseCard({
               ✕
             </button>
           </div>
-        ))}
+          )
+        })}
       </div>
+
+      {model && (
+        <p className="mt-1.5 text-[11px] text-slate-500">
+          Faint numbers are your rep goals — learned from your strength and how your sets fall
+          off. Hit one and the set number lights up.
+        </p>
+      )}
 
       <div className="mt-3 flex flex-wrap items-center gap-2">
         <button className="btn-ghost flex-1 py-2 text-sm" onClick={onAddSet}>

@@ -23,6 +23,25 @@ export function lastPerformance(
   return { date: session.date, exercise }
 }
 
+/**
+ * The most recent logged performances of an exercise (newest first), for
+ * fitting the per-set target model. Only entries with real set data count.
+ */
+export function recentPerformances(
+  sessions: Session[],
+  profileId: ID,
+  exerciseName: string,
+  excludeSessionId?: ID,
+  limit = 5,
+): LoggedExercise[] {
+  return sessions
+    .filter((s) => s.profileId === profileId && s.id !== excludeSessionId)
+    .sort((a, b) => (b.completedAt ?? b.startedAt) - (a.completedAt ?? a.startedAt))
+    .flatMap((s) => s.exercises.filter((e) => sameName(e.name, exerciseName)))
+    .filter((e) => e.sets.some((s) => s.weight != null && s.reps != null))
+    .slice(0, limit)
+}
+
 /** One-line summary of an exercise's logged sets, e.g. "135 × 8, 135 × 8, 145 × 6". */
 export function summarizeSets(ex: LoggedExercise): string {
   const filled = ex.sets.filter((s) => s.weight != null || s.reps != null)
