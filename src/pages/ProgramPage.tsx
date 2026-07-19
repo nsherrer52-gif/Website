@@ -4,7 +4,8 @@ import { PageHeader, EmptyState } from '../components/ui'
 import { MuscleEditor } from '../components/MuscleEditor'
 import { ExerciseDatalist } from '../components/ExerciseDatalist'
 import { ExerciseSlotPicker } from '../components/ExerciseSlotPicker'
-import { MUSCLES, muscleName } from '../lib/muscles'
+import { MUSCLES } from '../lib/muscles'
+import { MuscleTag } from '../components/MuscleTag'
 import { TEMPLATES } from '../lib/templates'
 import type { Exercise, MuscleContribution, WorkoutDay } from '../types'
 
@@ -205,9 +206,7 @@ function DayEditor({ day, index, total }: { day: WorkoutDay; index: number; tota
             <div key={ex.id} className="rounded-xl bg-slate-900/50 p-3">
               {ex.slotMuscle && (
                 <div className="mb-1.5 flex items-center gap-2">
-                  <span className="chip border border-sky-500/40 bg-sky-500/10 text-sky-400">
-                    {muscleName(ex.slotMuscle)} slot
-                  </span>
+                  <MuscleTag muscleId={ex.slotMuscle} suffix=" slot" />
                   {!ex.name && <span className="text-xs text-slate-500">pick now or during the workout</span>}
                 </div>
               )}

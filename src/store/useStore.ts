@@ -102,7 +102,8 @@ interface Actions {
   ) => void
   /** Set a set's weight and cascade it to later in-lockstep sets. */
   updateSetWeight: (sessionId: ID, exIndex: number, setId: ID, weight: number | null) => void
-  addSet: (sessionId: ID, exIndex: number) => void
+  /** Add a set; with afterSetId it inserts right below that set. */
+  addSet: (sessionId: ID, exIndex: number, afterSetId?: ID) => void
   removeSet: (sessionId: ID, exIndex: number, setId: ID) => void
   addExerciseToSession: (sessionId: ID, name: string) => void
   /** Choose the exercise for an unfilled slot in a live session. */
@@ -433,21 +434,21 @@ export const useStore = create<StoreState>()(
           }),
         })),
 
-      addSet: (sessionId, exIndex) =>
+      addSet: (sessionId, exIndex, afterSetId) =>
         set((s) => ({
           sessions: s.sessions.map((sess) => {
             if (sess.id !== sessionId) return sess
             const exercises = sess.exercises.map((ex, i) => {
               if (i !== exIndex) return ex
-              const last = ex.sets[ex.sets.length - 1]
-              return {
-                ...ex,
-                sets: [
-                  ...ex.sets,
-                  // Carry over the last set's weight as a convenience.
-                  { id: uid(), reps: null, weight: last?.weight ?? null, done: false },
-                ],
-              }
+              const at = afterSetId
+                ? ex.sets.findIndex((x) => x.id === afterSetId)
+                : ex.sets.length - 1
+              const idx = at === -1 ? ex.sets.length - 1 : at
+              const src = ex.sets[idx]
+              const sets = [...ex.sets]
+              // Carry over the neighbouring set's weight as a convenience.
+              sets.splice(idx + 1, 0, { id: uid(), reps: null, weight: src?.weight ?? null, done: false })
+              return { ...ex, sets }
             })
             return { ...sess, exercises }
           }),

@@ -5,6 +5,7 @@ import {
   DEFAULT_MUSCLE_TARGETS,
   musclesByRegion,
   muscleName,
+  REGION_COLORS,
   statusColor,
 } from '../lib/muscles'
 import {
@@ -84,7 +85,13 @@ export function MusclesTab() {
 
       {musclesByRegion().map(({ region, muscles }) => (
         <div key={region} className="card space-y-3 p-4">
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-400">{region}</h3>
+          <h3 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-slate-400">
+            <span
+              className="h-2 w-2 rounded-full"
+              style={{ backgroundColor: REGION_COLORS[region] }}
+            />
+            {region}
+          </h3>
           {muscles.map((m) => (
             <button
               key={m.id}

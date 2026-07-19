@@ -37,6 +37,24 @@ export const MUSCLE_BY_ID: Record<MuscleId, Muscle> = Object.fromEntries(
   MUSCLES.map((m) => [m.id, m]),
 )
 
+/**
+ * Tag color per region (RP-style colored muscle chips). Always shown WITH the
+ * muscle name — color is reinforcement, never the only signal.
+ */
+export const REGION_COLORS: Record<Region, string> = {
+  Chest: '#fb923c', // orange
+  Back: '#38bdf8', // cyan
+  Shoulders: '#c084fc', // purple
+  Arms: '#f472b6', // pink
+  Legs: '#a3e635', // lime
+  Core: '#fbbf24', // amber
+}
+
+export function muscleRegionColor(id: MuscleId): string {
+  const m = MUSCLE_BY_ID[id]
+  return m ? REGION_COLORS[m.region] : '#8c95a3'
+}
+
 export function muscleName(id: MuscleId): string {
   return MUSCLE_BY_ID[id]?.name ?? id
 }

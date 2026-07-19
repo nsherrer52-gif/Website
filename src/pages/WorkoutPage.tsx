@@ -6,11 +6,11 @@ import { buildSetModel, setTarget } from '../lib/progression'
 import { exerciseMomentum } from '../lib/momentum'
 import { formatLongDate } from '../lib/date'
 import { computePRSet, prKey } from '../lib/pr'
-import { muscleName } from '../lib/muscles'
+import { muscleName, muscleRegionColor } from '../lib/muscles'
 import { EmptyState, PRBadge } from '../components/ui'
-import { Stepper } from '../components/Stepper'
 import { ExerciseDatalist } from '../components/ExerciseDatalist'
 import { ExerciseSlotPicker } from '../components/ExerciseSlotPicker'
+import { MuscleTag } from '../components/MuscleTag'
 import { RestTimer } from '../components/RestTimer'
 import { MomentumBadge } from '../components/MomentumBadge'
 import { primeAudio } from '../lib/beep'
@@ -25,7 +25,7 @@ export function WorkoutPage() {
   const session = useStore((s) => s.sessions.find((x) => x.id === id))
   const allSessions = useStore((s) => s.sessions)
 
-  // Personal records recompute live as you log, so 🏆 appears the moment you beat one.
+  // Personal records recompute live as you log, so PR appears the moment you beat one.
   const prs = useMemo(
     () => (profile ? computePRSet(allSessions, profile.id) : new Set<string>()),
     [allSessions, profile],
@@ -49,8 +49,11 @@ export function WorkoutPage() {
 
   if (!session) {
     return (
-      <EmptyState icon="🤔" title="Workout not found">
-        It may have been deleted. <button className="text-sky-400 underline" onClick={() => navigate('/')}>Go home</button>
+      <EmptyState title="Workout not found">
+        It may have been deleted.{' '}
+        <button className="text-sky-400 underline" onClick={() => navigate('/')}>
+          Go home
+        </button>
       </EmptyState>
     )
   }
@@ -60,6 +63,7 @@ export function WorkoutPage() {
     0,
   )
   const totalSets = session.exercises.reduce((n, ex) => n + ex.sets.length, 0)
+  const progressPct = totalSets > 0 ? (completedSets / totalSets) * 100 : 0
   const barWeight = (profile?.unit ?? 'lb') === 'kg' ? prefs.barWeightKg : prefs.barWeightLb
 
   function handleSetChange(
@@ -104,28 +108,36 @@ export function WorkoutPage() {
   }
 
   return (
-    <div className="space-y-5">
-      {/* Header */}
-      <div>
+    <div className="space-y-4">
+      {/* Sticky live-session header with progress bar */}
+      <div className="sticky top-[53px] z-10 -mx-4 border-b border-slate-700/60 bg-slate-900/95 px-4 pb-2.5 pt-1.5 backdrop-blur-md">
         <div className="flex items-center justify-between gap-2">
-          <h1 className="text-2xl font-bold tracking-tight">{session.dayName}</h1>
-          <span
-            className="rounded-full px-2.5 py-1 text-xs font-semibold"
-            style={{ backgroundColor: (profile?.color ?? '#a3e635') + '22', color: profile?.color }}
-          >
-            {profile?.name}
-          </span>
+          <h1 className="truncate text-lg font-bold tracking-tight">{session.dayName}</h1>
+          <div className="flex shrink-0 items-center gap-2">
+            <input
+              id="session-date"
+              type="date"
+              aria-label="Workout date"
+              value={session.date}
+              onChange={(e) => setSessionDate(session.id, e.target.value)}
+              className="rounded-md border border-slate-700 bg-slate-800 px-1.5 py-1 text-xs text-slate-300"
+            />
+            <span
+              className="rounded-full px-2 py-0.5 text-xs font-semibold"
+              style={{ backgroundColor: (profile?.color ?? '#a3e635') + '22', color: profile?.color }}
+            >
+              {profile?.name}
+            </span>
+          </div>
         </div>
-        <div className="mt-2 flex items-center gap-2 text-sm text-slate-400">
-          <label htmlFor="session-date">Date</label>
-          <input
-            id="session-date"
-            type="date"
-            value={session.date}
-            onChange={(e) => setSessionDate(session.id, e.target.value)}
-            className="rounded-lg border border-slate-700 bg-slate-800 px-2 py-1 text-slate-100"
-          />
-          <span className="ml-auto">
+        <div className="mt-2 flex items-center gap-2.5">
+          <div className="h-1 flex-1 overflow-hidden rounded-full bg-slate-700/70">
+            <div
+              className="h-full rounded-full bg-sky-500 transition-all"
+              style={{ width: `${progressPct}%` }}
+            />
+          </div>
+          <span className="text-[11px] font-semibold tabular-nums text-slate-400">
             {completedSets}/{totalSets} sets
           </span>
         </div>
@@ -133,9 +145,7 @@ export function WorkoutPage() {
 
       {/* Exercises */}
       {session.exercises.length === 0 && (
-        <EmptyState icon="➕" title="No exercises">
-          Add an exercise below to start logging.
-        </EmptyState>
+        <EmptyState title="No exercises">Add an exercise below to start logging.</EmptyState>
       )}
 
       {session.exercises.map((ex, exIndex) =>
@@ -160,7 +170,7 @@ export function WorkoutPage() {
             onSetChange={(setId, patch) => handleSetChange(exIndex, setId, patch)}
             onWeightChange={(setId, weight) => updateSetWeight(session.id, exIndex, setId, weight)}
             onSwap={(name) => fillSessionSlot(session.id, exIndex, name)}
-            onAddSet={() => addSet(session.id, exIndex)}
+            onAddSet={(afterSetId) => addSet(session.id, exIndex, afterSetId)}
             onRemoveSet={(setId) => removeSet(session.id, exIndex, setId)}
             onNotes={(notes) => setExerciseNotes(session.id, exIndex, notes)}
           />
@@ -283,15 +293,18 @@ function SlotCard({
   onPick: (name: string) => void
 }) {
   return (
-    <div className="card border-dashed border-sky-500/40 p-4">
+    <div
+      className="card border-dashed p-4"
+      style={{ borderColor: muscleRegionColor(muscleId) + '66' }}
+    >
       <div className="flex items-baseline justify-between gap-2">
-        <span className="chip border border-sky-500/40 bg-sky-500/10 text-sky-400">{muscleName(muscleId)}</span>
+        <MuscleTag muscleId={muscleId} />
         <span className="text-xs text-slate-400">
           {sets} set{sets === 1 ? '' : 's'}
           {targetReps ? ` × ${targetReps}` : ''}
         </span>
       </div>
-      <p className="mt-1 text-xs text-slate-400">
+      <p className="mt-2 text-xs text-slate-400">
         Pick any {muscleName(muscleId).toLowerCase()} exercise — whatever equipment is free. Your
         targets and history kick in once you choose.
       </p>
@@ -303,6 +316,12 @@ function SlotCard({
 }
 
 // ---------------------------------------------------------------------------
+
+function parseNum(v: string): number | null {
+  if (v.trim() === '') return null
+  const n = Number(v)
+  return Number.isFinite(n) ? n : null
+}
 
 function ExerciseCard({
   ex,
@@ -335,7 +354,7 @@ function ExerciseCard({
   onWeightChange: (setId: string, weight: number | null) => void
   /** Replace this exercise with a same-muscle alternative (machine taken). */
   onSwap: (name: string) => void
-  onAddSet: () => void
+  onAddSet: (afterSetId?: string) => void
   onRemoveSet: (setId: string) => void
   onNotes: (notes: string) => void
 }) {
@@ -343,14 +362,15 @@ function ExerciseCard({
   const [showRIR, setShowRIR] = useState(() => ex.sets.some((s) => s.rir != null))
   const [showPlates, setShowPlates] = useState(false)
   const [showSwap, setShowSwap] = useState(false)
-  const weightStep = unit === 'kg' ? 2.5 : 5
+  const [showMenu, setShowMenu] = useState(false)
+  const [openSetMenu, setOpenSetMenu] = useState<string | null>(null)
 
-  // The exercise's main mover, used to offer same-muscle swaps.
+  // The exercise's main mover: colored tag + source for same-muscle swaps.
   const primaryMuscle = Object.entries(ex.muscles ?? {}).sort((a, b) => b[1] - a[1])[0]?.[0]
 
   const grid = showRIR
-    ? 'grid grid-cols-[1.5rem_1fr_1fr_2.75rem_2.25rem_1.25rem] items-center gap-1.5'
-    : 'grid grid-cols-[1.5rem_1fr_1fr_2.25rem_1.25rem] items-center gap-1.5'
+    ? 'grid grid-cols-[1.75rem_1fr_1fr_3rem_2.75rem_1.25rem] items-center gap-1.5'
+    : 'grid grid-cols-[1.75rem_1fr_1fr_2.75rem_1.25rem] items-center gap-1.5'
 
   // Ghost placeholders: what you did on the same set number last time.
   const lastReps = (last?.exercise.sets ?? []).map((s) =>
@@ -368,167 +388,77 @@ function ExerciseCard({
     return setTarget(model, weight, setIndex, lastSame)
   }
 
-  const muscleHint = Object.entries(ex.muscles ?? {})
-    .filter(([, v]) => v > 0)
-    .map(([id, v]) => `${muscleName(id)} ${v === 1 ? '1' : '½'}`)
-    .join(' · ')
-
   const suggestion = ex.suggestion
 
   return (
     <div className="card p-4">
-      <div className="flex items-baseline justify-between gap-2">
-        <h3 className="flex items-center gap-1.5 text-lg font-bold">
-          {ex.name}
+      {/* Tag row: muscle group + status, kebab on the right */}
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center gap-1.5">
+          {primaryMuscle && <MuscleTag muscleId={primaryMuscle} />}
           {isPR && <PRBadge />}
           {momentum && <MomentumBadge level={momentum} compact />}
-        </h3>
-        {ex.targetReps && <span className="text-xs text-slate-400">target {ex.targetReps} reps</span>}
+        </div>
+        <button
+          aria-label="Exercise options"
+          className={`shrink-0 rounded-md px-2 py-0.5 text-lg leading-none ${showMenu ? 'bg-slate-700/60 text-slate-200' : 'text-slate-500 hover:text-slate-300'}`}
+          onClick={() => setShowMenu((v) => !v)}
+        >
+          ⋮
+        </button>
       </div>
 
-      {muscleHint && <div className="mt-0.5 text-xs text-slate-500">{muscleHint}</div>}
-      {ex.pinnedNote && (
-        <div className="mt-1 text-xs italic text-slate-300">{ex.pinnedNote}</div>
+      <h3 className="mt-1.5 text-lg font-bold leading-tight">{ex.name}</h3>
+      {ex.pinnedNote && <div className="mt-0.5 text-xs italic text-slate-300">{ex.pinnedNote}</div>}
+
+      {/* Exercise menu (RP-style kebab) */}
+      {showMenu && (
+        <div className="mt-2 grid grid-cols-4 gap-1.5">
+          {(
+            [
+              ['Plates', showPlates, () => setShowPlates((v) => !v)],
+              ['RIR', showRIR, () => setShowRIR((v) => !v)],
+              ['Note', showNotes, () => setShowNotes((v) => !v)],
+              ['Swap', showSwap, () => primaryMuscle && setShowSwap((v) => !v)],
+            ] as [string, boolean, () => void][]
+          ).map(([label, active, toggle]) => (
+            <button
+              key={label}
+              className={`rounded-lg border py-1.5 text-xs font-semibold transition ${
+                active
+                  ? 'border-sky-500/60 bg-sky-500/10 text-sky-400'
+                  : 'border-slate-700 text-slate-300 hover:bg-slate-700/40'
+              }`}
+              onClick={toggle}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
       )}
 
       {/* The coach's prescription for this session */}
-      {suggestion && suggestion.action !== 'baseline' && (
-        <div className="mt-2 rounded-lg border border-sky-500/30 bg-sky-500/10 px-3 py-2 text-xs">
-          <span className="font-semibold text-sky-300">
-            Target: {suggestion.weight != null ? `${suggestion.weight} ${unit} × ` : ''}
-            {suggestion.reps} reps
-          </span>
-          <span className="ml-1 text-slate-400">— {suggestion.note}</span>
-        </div>
-      )}
-      {suggestion && suggestion.action === 'baseline' && (
-        <div className="mt-2 rounded-lg border border-slate-600/50 bg-slate-700/20 px-3 py-2 text-xs text-slate-400">
-          {suggestion.note}
+      {suggestion && (
+        <div className="mt-2.5 rounded-md border-l-2 border-sky-500 bg-sky-500/10 px-2.5 py-1.5">
+          {suggestion.action !== 'baseline' ? (
+            <>
+              <span className="text-xs font-bold text-sky-300">
+                Target {suggestion.weight != null ? `${suggestion.weight} ${unit} × ` : ''}
+                {suggestion.reps} reps
+              </span>
+              <span className="ml-1.5 text-[11px] text-slate-400">{suggestion.note}</span>
+            </>
+          ) : (
+            <span className="text-[11px] text-slate-400">{suggestion.note}</span>
+          )}
         </div>
       )}
 
       {last && (
-        <div className="mt-1 text-xs text-slate-400">
-          Last time: <span className="text-slate-300">{summarizeSets(last.exercise)}</span>
+        <div className="mt-1.5 text-[11px] text-slate-500">
+          Last: <span className="text-slate-400">{summarizeSets(last.exercise)}</span>
         </div>
       )}
-
-      {/* Column headers */}
-      <div className={`mt-3 ${grid} text-[11px] uppercase tracking-wide text-slate-500`}>
-        <span>Set</span>
-        <span className="pl-2">{unit}</span>
-        <span className="pl-2">Reps</span>
-        {showRIR && <span className="text-center">RIR</span>}
-        <span className="text-center">Done</span>
-        <span />
-      </div>
-
-      <div className="mt-1 space-y-1.5">
-        {ex.sets.map((s, i) => {
-          const goal = goalFor(i, s.weight)
-          const hitGoal = s.done && goal != null && s.reps != null && s.reps >= goal
-          return (
-          <div key={s.id} className={grid}>
-            <span
-              className={`text-center text-sm font-semibold ${hitGoal ? 'text-sky-500' : 'text-slate-400'}`}
-              title={goal != null ? `Goal: ${goal} reps` : undefined}
-            >
-              {i + 1}
-            </span>
-            <Stepper
-              value={s.weight}
-              step={weightStep}
-              ariaLabel="weight"
-              onChange={(v) => onWeightChange(s.id, v)}
-            />
-            <Stepper
-              value={s.reps}
-              step={1}
-              ariaLabel="reps"
-              placeholder={goal != null ? String(goal) : (lastReps[i] ?? '—')}
-              onChange={(v) => onSetChange(s.id, { reps: v })}
-            />
-            {showRIR && (
-              <select
-                aria-label="Reps in reserve"
-                value={s.rir ?? ''}
-                onChange={(e) =>
-                  onSetChange(s.id, { rir: e.target.value === '' ? null : Number(e.target.value) })
-                }
-                className="h-9 w-full rounded-lg border border-slate-700 bg-slate-900/70 text-center text-sm text-slate-100 outline-none focus:border-sky-500"
-              >
-                <option value="">–</option>
-                {[0, 1, 2, 3, 4].map((n) => (
-                  <option key={n} value={n}>
-                    {n}
-                  </option>
-                ))}
-              </select>
-            )}
-            <button
-              aria-label={s.done ? 'Mark set not done' : 'Mark set done'}
-              onClick={() => onSetChange(s.id, { done: !s.done })}
-              className={`mx-auto flex h-9 w-9 items-center justify-center rounded-lg border text-lg transition ${
-                s.done
-                  ? 'border-emerald-500 bg-emerald-500/20 text-emerald-400'
-                  : 'border-slate-600 text-slate-500'
-              }`}
-            >
-              {s.done ? '✓' : ''}
-            </button>
-            <button
-              aria-label="Remove set"
-              onClick={() => onRemoveSet(s.id)}
-              className="text-slate-500 hover:text-rose-400"
-            >
-              ✕
-            </button>
-          </div>
-          )
-        })}
-      </div>
-
-      {model && (
-        <p className="mt-1.5 text-[11px] text-slate-500">
-          Faint numbers are your rep goals — learned from your strength and how your sets fall
-          off. Hit one and the set number lights up.
-        </p>
-      )}
-
-      <div className="mt-3 flex flex-wrap items-center gap-2">
-        <button className="btn-ghost flex-1 py-2 text-sm" onClick={onAddSet}>
-          + Add set
-        </button>
-        <button
-          className={`btn-ghost py-2 text-sm ${showPlates ? 'text-sky-300' : ''}`}
-          title="Plate calculator"
-          onClick={() => setShowPlates((v) => !v)}
-        >
-          Plates
-        </button>
-        <button
-          className={`btn-ghost py-2 text-sm ${showRIR ? 'text-sky-300' : ''}`}
-          title="Log reps-in-reserve (how many more reps you had)"
-          onClick={() => setShowRIR((v) => !v)}
-        >
-          RIR
-        </button>
-        <button
-          className="btn-ghost py-2 text-sm"
-          onClick={() => setShowNotes((v) => !v)}
-        >
-          {showNotes ? 'Hide note' : 'Note'}
-        </button>
-        {primaryMuscle && (
-          <button
-            className={`btn-ghost py-2 text-sm ${showSwap ? 'text-sky-300' : ''}`}
-            title="Swap for a same-muscle exercise"
-            onClick={() => setShowSwap((v) => !v)}
-          >
-            Swap
-          </button>
-        )}
-      </div>
 
       {showSwap && primaryMuscle && (
         <div className="mt-2">
@@ -547,6 +477,123 @@ function ExerciseCard({
       )}
 
       {showPlates && <PlatePanel ex={ex} unit={unit as WeightUnit} barWeight={barWeight} />}
+
+      {/* Set table */}
+      <div className={`mt-3 ${grid} text-[10px] font-medium uppercase tracking-[0.12em] text-slate-500`}>
+        <span className="text-center">Set</span>
+        <span className="text-center">{unit}</span>
+        <span className="text-center">Reps</span>
+        {showRIR && <span className="text-center">RIR</span>}
+        <span className="text-center">Log</span>
+        <span />
+      </div>
+
+      <div className="mt-1.5 space-y-1.5">
+        {ex.sets.map((s, i) => {
+          const goal = goalFor(i, s.weight)
+          const hitGoal = s.done && goal != null && s.reps != null && s.reps >= goal
+          return (
+            <div key={s.id}>
+              <div className={grid}>
+                <span
+                  className={`text-center text-sm font-bold tabular-nums ${hitGoal ? 'text-sky-500' : 'text-slate-500'}`}
+                  title={goal != null ? `Goal: ${goal} reps` : undefined}
+                >
+                  {i + 1}
+                </span>
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  aria-label="Weight"
+                  className="set-cell"
+                  placeholder="—"
+                  value={s.weight ?? ''}
+                  onChange={(e) => onWeightChange(s.id, parseNum(e.target.value))}
+                />
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  aria-label="Reps"
+                  className="set-cell"
+                  placeholder={goal != null ? String(goal) : (lastReps[i] ?? '—')}
+                  value={s.reps ?? ''}
+                  onChange={(e) => onSetChange(s.id, { reps: parseNum(e.target.value) })}
+                />
+                {showRIR && (
+                  <select
+                    aria-label="Reps in reserve"
+                    value={s.rir ?? ''}
+                    onChange={(e) =>
+                      onSetChange(s.id, { rir: e.target.value === '' ? null : Number(e.target.value) })
+                    }
+                    className="set-cell px-0 text-sm"
+                  >
+                    <option value="">–</option>
+                    {[0, 1, 2, 3, 4].map((n) => (
+                      <option key={n} value={n}>
+                        {n}
+                      </option>
+                    ))}
+                  </select>
+                )}
+                <button
+                  aria-label={s.done ? 'Mark set not done' : 'Mark set done'}
+                  onClick={() => onSetChange(s.id, { done: !s.done })}
+                  className={`mx-auto flex h-11 w-11 items-center justify-center rounded-lg border-2 text-xl font-bold transition active:scale-95 ${
+                    s.done
+                      ? 'border-sky-500 bg-sky-500 text-slate-950'
+                      : 'border-sky-500/40 text-transparent hover:border-sky-500/70'
+                  }`}
+                >
+                  ✓
+                </button>
+                <button
+                  aria-label="Set options"
+                  onClick={() => setOpenSetMenu((v) => (v === s.id ? null : s.id))}
+                  className={`text-center text-lg leading-none ${openSetMenu === s.id ? 'text-slate-200' : 'text-slate-600 hover:text-slate-400'}`}
+                >
+                  ⋮
+                </button>
+              </div>
+              {openSetMenu === s.id && (
+                <div className="mt-1.5 flex gap-1.5 rounded-lg bg-slate-900/70 p-1.5">
+                  <button
+                    className="flex-1 rounded-md border border-slate-700 py-1.5 text-xs font-semibold text-slate-300 hover:bg-slate-700/40"
+                    onClick={() => {
+                      onAddSet(s.id)
+                      setOpenSetMenu(null)
+                    }}
+                  >
+                    + Add set below
+                  </button>
+                  <button
+                    className="flex-1 rounded-md border border-rose-500/40 py-1.5 text-xs font-semibold text-rose-400 hover:bg-rose-500/10"
+                    onClick={() => {
+                      onRemoveSet(s.id)
+                      setOpenSetMenu(null)
+                    }}
+                  >
+                    Delete set
+                  </button>
+                </div>
+              )}
+            </div>
+          )
+        })}
+      </div>
+
+      <button
+        className="mt-2 w-full rounded-lg border border-dashed border-slate-600 py-2 text-xs font-semibold text-slate-400 transition hover:border-slate-500 hover:text-slate-300"
+        onClick={() => onAddSet()}
+      >
+        + Add set
+      </button>
+
+      {model && (
+        <p className="mt-1.5 text-[10px] text-slate-600">
+          Faint numbers are your rep goals. Hit one and the set number lights up.
+        </p>
+      )}
 
       {showNotes && (
         <textarea

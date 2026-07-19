@@ -4,7 +4,7 @@ import { useStore } from '../store/useStore'
 import { funEquivalence, lifetimeTonnage, round1, sessionVolume } from '../lib/stats'
 import { computePRSet, prKey } from '../lib/pr'
 import { muscleVolumeForSessions, roundVol, doneSetCount } from '../lib/volume'
-import { muscleName } from '../lib/muscles'
+import { muscleName, muscleRegionColor } from '../lib/muscles'
 import { recentPerformances } from '../lib/history'
 import { buildSetModel, setTarget } from '../lib/progression'
 import { formatLongDate } from '../lib/date'
@@ -143,14 +143,18 @@ export function SummaryPage() {
         <div className="card p-4">
           <h2 className="mb-2 font-semibold">Muscles trained</h2>
           <div className="flex flex-wrap gap-2">
-            {muscles.map(([m, sets]) => (
-              <span
-                key={m}
-                className="rounded-full border border-slate-600/60 bg-slate-700/40 px-3 py-1 text-sm"
-              >
-                {muscleName(m)} <span className="text-slate-400">{roundVol(sets)}</span>
-              </span>
-            ))}
+            {muscles.map(([m, sets]) => {
+              const c = muscleRegionColor(m)
+              return (
+                <span
+                  key={m}
+                  className="rounded-full border px-3 py-1 text-sm"
+                  style={{ borderColor: c + '55', backgroundColor: c + '14', color: c }}
+                >
+                  {muscleName(m)} <span className="text-slate-400">{roundVol(sets)}</span>
+                </span>
+              )
+            })}
           </div>
         </div>
       )}

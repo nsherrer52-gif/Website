@@ -122,6 +122,13 @@ input[type='number'] {
   .chip {
     @apply inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.08em];
   }
+  /* Flat type-in cell for the workout log table. */
+  .set-cell {
+    @apply h-11 w-full rounded-lg border border-slate-700/70 bg-slate-900 text-center
+           text-[15px] font-semibold text-slate-100 tabular-nums outline-none transition
+           placeholder:font-normal placeholder:text-slate-600
+           focus:border-sky-500/70 focus:ring-1 focus:ring-sky-500/40;
+  }
   .page-enter {
     animation: fade-in 0.18s ease-out;
   }
