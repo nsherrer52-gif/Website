@@ -41,7 +41,7 @@ const RAW: Record<string, MuscleContribution> = {
   'Skullcrusher': { triceps: 1 },
 
   // --- Pull: back ---
-  'Deadlift': { hamstrings: 1, glutes: 1, lats: 0.5, upperBack: 0.5, traps: 0.5, forearms: 0.5 },
+  'Deadlift': { hamstrings: 1, glutes: 1, spinalErectors: 1, lats: 0.5, upperBack: 0.5, traps: 0.5, forearms: 0.5 },
   'Pull-Up': { lats: 1, upperBack: 0.5, biceps: 0.5, forearms: 0.5 },
   'Chin-Up': { lats: 1, biceps: 1, upperBack: 0.5 },
   'Lat Pulldown': { lats: 1, upperBack: 0.5, biceps: 0.5 },
@@ -53,6 +53,12 @@ const RAW: Record<string, MuscleContribution> = {
   'Face Pull': { rearDelts: 1, upperBack: 0.5, traps: 0.5 },
   'Reverse Fly': { rearDelts: 1, upperBack: 0.5 },
   'Shrug': { traps: 1, forearms: 0.5 },
+  'Rack Pull': { traps: 1, spinalErectors: 1, hamstrings: 0.5, glutes: 0.5, forearms: 0.5 },
+  'Back Extension': { spinalErectors: 1, glutes: 0.5, hamstrings: 0.5 },
+  'Hyperextension': { spinalErectors: 1, glutes: 0.5, hamstrings: 0.5 },
+  'Superman': { spinalErectors: 1 },
+  'Neck Curl': { neck: 1 },
+  'Neck Extension': { neck: 1 },
 
   // --- Pull: biceps / forearms ---
   'Barbell Curl': { biceps: 1, forearms: 0.5 },
@@ -63,18 +69,18 @@ const RAW: Record<string, MuscleContribution> = {
   'Wrist Curl': { forearms: 1 },
 
   // --- Legs ---
-  'Back Squat': { quads: 1, glutes: 1, hamstrings: 0.5 },
-  'Front Squat': { quads: 1, glutes: 0.5 },
+  'Back Squat': { quads: 1, glutes: 1, hamstrings: 0.5, spinalErectors: 0.5 },
+  'Front Squat': { quads: 1, glutes: 0.5, spinalErectors: 0.5 },
   'Leg Press': { quads: 1, glutes: 0.5, hamstrings: 0.5 },
   'Hack Squat': { quads: 1, glutes: 0.5 },
   'Bulgarian Split Squat': { quads: 1, glutes: 1, hamstrings: 0.5 },
   'Lunge': { quads: 1, glutes: 1, hamstrings: 0.5 },
   'Leg Extension': { quads: 1 },
   'Leg Curl': { hamstrings: 1 },
-  'Romanian Deadlift': { hamstrings: 1, glutes: 1, lats: 0.5 },
-  'Stiff-Leg Deadlift': { hamstrings: 1, glutes: 1 },
+  'Romanian Deadlift': { hamstrings: 1, glutes: 1, spinalErectors: 0.5, lats: 0.5 },
+  'Stiff-Leg Deadlift': { hamstrings: 1, glutes: 1, spinalErectors: 0.5 },
   'Hip Thrust': { glutes: 1, hamstrings: 0.5 },
-  'Good Morning': { hamstrings: 1, glutes: 0.5 },
+  'Good Morning': { hamstrings: 1, glutes: 0.5, spinalErectors: 1 },
   'Standing Calf Raise': { calves: 1 },
   'Seated Calf Raise': { calves: 1 },
   'Calf Raise': { calves: 1 },

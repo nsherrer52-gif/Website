@@ -3,6 +3,7 @@ import type { MuscleId } from '../types'
 import { useStore, useActiveProfile } from '../store/useStore'
 import {
   DEFAULT_MUSCLE_TARGETS,
+  MUSCLES,
   musclesByRegion,
   muscleName,
   REGION_COLORS,
@@ -27,7 +28,8 @@ export function MusclesTab() {
   const profile = useActiveProfile()
   const sessions = useStore((s) => s.sessions)
   const library = useStore((s) => s.exerciseLibrary)
-  const targets = useStore((s) => s.muscleTargets)
+  const storedTargets = useStore((s) => s.muscleTargets)
+  const targets = useMemo(() => ({ ...DEFAULT_MUSCLE_TARGETS, ...storedTargets }), [storedTargets])
   const [selected, setSelected] = useState<MuscleId | null>(null)
 
   const pid = profile?.id ?? ''
@@ -68,7 +70,7 @@ export function MusclesTab() {
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-3">
         <Stat label="This week" value={`${roundVol(totalSets)} sets`} accent={profile?.color} />
-        <Stat label="Muscles trained" value={`${trained} / 15`} />
+        <Stat label="Muscles trained" value={`${trained} / ${MUSCLES.length}`} />
       </div>
 
       <CoachCard recommendations={recommendations} />

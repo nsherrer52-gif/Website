@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useStore, useActiveProfile } from '../store/useStore'
 import { lastPerformance, recentPerformances, summarizeSets } from '../lib/history'
@@ -15,6 +15,7 @@ import { RestTimer } from '../components/RestTimer'
 import { MomentumBadge } from '../components/MomentumBadge'
 import { primeAudio } from '../lib/beep'
 import { platesForUnit, platesPerSide, formatPlates } from '../lib/plates'
+import { warmupRamp } from '../lib/warmup'
 import type { LoggedExercise, MuscleId, WeightUnit } from '../types'
 
 export function WorkoutPage() {
@@ -280,6 +281,42 @@ function PlatePanel({ ex, unit, barWeight }: { ex: LoggedExercise; unit: WeightU
 
 // ---------------------------------------------------------------------------
 
+/** Warm-up pyramid up to the first working weight (bar → 55% → 75% → 90%). */
+function WarmupPanel({ ex, unit, barWeight }: { ex: LoggedExercise; unit: WeightUnit; barWeight: number }) {
+  const working = ex.sets.find((s) => s.weight != null && s.weight > 0)?.weight ?? ex.suggestion?.weight ?? null
+  const ramp = working != null ? warmupRamp(working, barWeight, unit) : []
+
+  return (
+    <div className="mt-2 rounded-lg bg-slate-900/60 p-3 text-sm">
+      <div className="mb-1.5 flex items-baseline justify-between">
+        <span className="font-semibold text-slate-300">Warm-up ramp</span>
+        {working != null && (
+          <span className="text-xs text-slate-500">
+            working {working} {unit}
+          </span>
+        )}
+      </div>
+      {working == null || ramp.length === 0 ? (
+        <p className="text-slate-500">Set a working weight above and the ramp appears here.</p>
+      ) : (
+        <div className="space-y-1">
+          {ramp.map((w, i) => (
+            <div key={i} className="flex items-baseline justify-between gap-3">
+              <span className="font-mono font-semibold tabular-nums">
+                {w.weight} {unit}
+              </span>
+              <span className="text-slate-300">× {w.reps}</span>
+            </div>
+          ))}
+          <p className="pt-1 text-xs text-slate-500">Warm-up sets don't count toward volume — don't log them.</p>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+
 /** An unfilled muscle slot: choose the exercise now, based on what's free. */
 function SlotCard({
   muscleId,
@@ -362,8 +399,19 @@ function ExerciseCard({
   const [showRIR, setShowRIR] = useState(() => ex.sets.some((s) => s.rir != null))
   const [showPlates, setShowPlates] = useState(false)
   const [showSwap, setShowSwap] = useState(false)
+  const [showWarmup, setShowWarmup] = useState(false)
   const [showMenu, setShowMenu] = useState(false)
   const [openSetMenu, setOpenSetMenu] = useState<string | null>(null)
+
+  // Finished exercises fold into a slim row so long days stay scannable.
+  const allDone = ex.sets.length > 0 && ex.sets.every((s) => s.done)
+  const [collapsed, setCollapsed] = useState(allDone)
+  const wasAllDone = useRef(allDone)
+  useEffect(() => {
+    if (allDone && !wasAllDone.current) setCollapsed(true)
+    if (!allDone) setCollapsed(false)
+    wasAllDone.current = allDone
+  }, [allDone])
 
   // The exercise's main mover: colored tag + source for same-muscle swaps.
   const primaryMuscle = Object.entries(ex.muscles ?? {}).sort((a, b) => b[1] - a[1])[0]?.[0]
@@ -390,6 +438,25 @@ function ExerciseCard({
 
   const suggestion = ex.suggestion
 
+  if (collapsed) {
+    return (
+      <button
+        className="card flex w-full items-center justify-between gap-2 p-3.5 text-left"
+        onClick={() => setCollapsed(false)}
+        title="Expand exercise"
+      >
+        <div className="flex min-w-0 items-center gap-2">
+          {primaryMuscle && <MuscleTag muscleId={primaryMuscle} />}
+          <span className="truncate font-bold">{ex.name}</span>
+          {isPR && <PRBadge />}
+        </div>
+        <span className="flex shrink-0 items-center gap-1.5 text-sm font-bold text-sky-500">
+          {ex.sets.length} ✓ <span className="font-normal text-slate-500">▾</span>
+        </span>
+      </button>
+    )
+  }
+
   return (
     <div className="card p-4">
       {/* Tag row: muscle group + status, kebab on the right */}
@@ -413,9 +480,10 @@ function ExerciseCard({
 
       {/* Exercise menu (RP-style kebab) */}
       {showMenu && (
-        <div className="mt-2 grid grid-cols-4 gap-1.5">
+        <div className="mt-2 grid grid-cols-5 gap-1.5">
           {(
             [
+              ['Warmup', showWarmup, () => setShowWarmup((v) => !v)],
               ['Plates', showPlates, () => setShowPlates((v) => !v)],
               ['RIR', showRIR, () => setShowRIR((v) => !v)],
               ['Note', showNotes, () => setShowNotes((v) => !v)],
@@ -424,7 +492,7 @@ function ExerciseCard({
           ).map(([label, active, toggle]) => (
             <button
               key={label}
-              className={`rounded-lg border py-1.5 text-xs font-semibold transition ${
+              className={`rounded-lg border py-1.5 text-[11px] font-semibold transition ${
                 active
                   ? 'border-sky-500/60 bg-sky-500/10 text-sky-400'
                   : 'border-slate-700 text-slate-300 hover:bg-slate-700/40'
@@ -477,6 +545,7 @@ function ExerciseCard({
       )}
 
       {showPlates && <PlatePanel ex={ex} unit={unit as WeightUnit} barWeight={barWeight} />}
+      {showWarmup && <WarmupPanel ex={ex} unit={unit as WeightUnit} barWeight={barWeight} />}
 
       {/* Set table */}
       <div className={`mt-3 ${grid} text-[10px] font-medium uppercase tracking-[0.12em] text-slate-500`}>

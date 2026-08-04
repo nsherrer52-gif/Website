@@ -42,7 +42,9 @@ export function BodyMap({
     <svg viewBox="0 0 220 200" className="h-auto w-full select-none" role="img" aria-label="Muscle volume body map">
       {/* ---------------- FRONT (center x ≈ 55) ---------------- */}
       <circle cx="55" cy="15" r="10" fill={NEUTRAL} />
-      <rect x="51" y="24" width="8" height="6" fill={NEUTRAL} />
+      <Region id="neck">
+        <rect x="50" y="23" width="10" height="7" rx="2" />
+      </Region>
       {/* neutral shins */}
       <ellipse cx="47" cy="170" rx="6" ry="16" fill={NEUTRAL} />
       <ellipse cx="63" cy="170" rx="6" ry="16" fill={NEUTRAL} />
@@ -80,7 +82,9 @@ export function BodyMap({
 
       {/* ---------------- BACK (center x ≈ 165) ---------------- */}
       <circle cx="165" cy="15" r="10" fill={NEUTRAL} />
-      <rect x="161" y="24" width="8" height="6" fill={NEUTRAL} />
+      <Region id="neck">
+        <rect x="160" y="23" width="10" height="7" rx="2" />
+      </Region>
       {/* neutral forearms (back) */}
       <ellipse cx="137" cy="85" rx="4.5" ry="12" fill={NEUTRAL} />
       <ellipse cx="193" cy="85" rx="4.5" ry="12" fill={NEUTRAL} />
@@ -102,6 +106,10 @@ export function BodyMap({
       <Region id="triceps">
         <ellipse cx="140" cy="63" rx="5" ry="11" />
         <ellipse cx="190" cy="63" rx="5" ry="11" />
+      </Region>
+      <Region id="spinalErectors">
+        <ellipse cx="161.5" cy="76" rx="2.8" ry="14" />
+        <ellipse cx="168.5" cy="76" rx="2.8" ry="14" />
       </Region>
       <Region id="glutes">
         <ellipse cx="158" cy="101" rx="8.5" ry="8" />

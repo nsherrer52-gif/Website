@@ -1,5 +1,5 @@
 import type { ID, MuscleContribution, MuscleId, MuscleTarget, Session } from '../types'
-import { MUSCLES } from './muscles'
+import { DEFAULT_MUSCLE_TARGETS, MUSCLES } from './muscles'
 import { isoWeekKey, roundVol, weeklyMuscleVolume } from './volume'
 
 // ---------------------------------------------------------------------------
@@ -49,7 +49,7 @@ export function weeklyRecommendations(
   const prevWeekKey = isoWeekKey(isoDaysAgo(7))
 
   return MUSCLES.map((m) => {
-    const target = targets[m.id] ?? { min: 8, max: 16 }
+    const target = targets[m.id] ?? DEFAULT_MUSCLE_TARGETS[m.id] ?? { min: 8, max: 16 }
     const last = roundVol(weekTotals.get(prevWeekKey)?.[m.id] ?? 0)
 
     // Consecutive past weeks (starting last week) at or above the minimum.

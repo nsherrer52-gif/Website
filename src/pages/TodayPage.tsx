@@ -18,7 +18,8 @@ export function TodayPage() {
   const program = useStore((s) => s.program)
   const sessions = useStore((s) => s.sessions)
   const library = useStore((s) => s.exerciseLibrary)
-  const targets = useStore((s) => s.muscleTargets)
+  const storedTargets = useStore((s) => s.muscleTargets)
+  const targets = useMemo(() => ({ ...DEFAULT_MUSCLE_TARGETS, ...storedTargets }), [storedTargets])
   const startSession = useStore((s) => s.startSession)
 
   const mySessions = useMemo(
@@ -102,7 +103,17 @@ export function TodayPage() {
 
       <div className="grid grid-cols-2 gap-3">
         <Stat label="This week" value={`${thisWeekCount} workout${thisWeekCount === 1 ? '' : 's'}`} accent={profile?.color} />
-        <Stat label="Last workout" value={lastWorkout ? formatDate(lastWorkout.date) : '—'} />
+        {lastWorkout ? (
+          <button
+            className="text-left"
+            onClick={() => navigate(`/workout/${lastWorkout.id}`)}
+            title="Open your last workout"
+          >
+            <Stat label="Last workout ›" value={formatDate(lastWorkout.date)} />
+          </button>
+        ) : (
+          <Stat label="Last workout" value="—" />
+        )}
       </div>
 
       {/* This week's muscle volume */}

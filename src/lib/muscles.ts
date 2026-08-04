@@ -18,6 +18,8 @@ export const MUSCLES: Muscle[] = [
   { id: 'lats', name: 'Lats', region: 'Back' },
   { id: 'upperBack', name: 'Upper Back', region: 'Back' },
   { id: 'traps', name: 'Traps', region: 'Back' },
+  { id: 'spinalErectors', name: 'Spinal Erectors', region: 'Back' },
+  { id: 'neck', name: 'Neck', region: 'Back' },
   { id: 'frontDelts', name: 'Front Delts', region: 'Shoulders' },
   { id: 'sideDelts', name: 'Side Delts', region: 'Shoulders' },
   { id: 'rearDelts', name: 'Rear Delts', region: 'Shoulders' },
@@ -89,6 +91,8 @@ export const DEFAULT_MUSCLE_TARGETS: Record<MuscleId, MuscleTarget> = {
   forearms: SMALL,
   calves: SMALL,
   abs: SMALL,
+  spinalErectors: SMALL,
+  neck: { min: 2, max: 8 },
 }
 
 // --- Heat-map coloring ------------------------------------------------------
